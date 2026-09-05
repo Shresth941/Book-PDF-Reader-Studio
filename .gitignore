@@ -1,0 +1,29 @@
+# Local secrets (only placeholder examples belong in Git)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Dependencies and generated files
+.venv*/
+node_modules/
+dist/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.vercel/
+*.log
+
+# Private uploaded documents and local analysis output
+uploads/
+pdf-test-render/
+
+# Local editor / operating system files
+.DS_Store
+Thumbs.db
+
+.pytest-tmp/
+*.pdf
