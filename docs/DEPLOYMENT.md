@@ -10,7 +10,7 @@ create production deployments automatically.
 
 ## Architecture
 
-The repository uses Vercel Services to build two applications in one project:
+The repository uses Vercel Services to build three applications in one project:
 
 - `frontend`: the React and Vite user interface
 - `backend`: the Python FastAPI document and language API
@@ -33,6 +33,11 @@ transfer per month. Hobby users are not charged for additional Blob usage;
 Blob access pauses when a limit is exceeded until usage becomes available
 again. PDF uploads are capped at 25 MB by the upload token and backend.
 
+Scanned-page OCR uses RapidOCR, ONNX Runtime, and headless OpenCV. Those native
+dependencies make the Python Function larger than the standard 500 MB Python
+bundle limit, so the project opts into Vercel Large Functions (public beta) on
+Fluid compute. The setting is required for production and preview deployments.
+
 Private uploaded PDFs remain in Blob storage until removed through the Vercel
 Storage dashboard. The app does not expose a public file URL. Avoid uploading
 confidential documents until user authentication and document ownership checks
@@ -47,6 +52,7 @@ connected to this project. Never copy those credentials into GitHub.
 | Variable | Location | Purpose |
 | --- | --- | --- |
 | `BLOB_READ_WRITE_TOKEN` | Vercel only | Private Blob read and upload authorization |
+| `VERCEL_SUPPORT_LARGE_FUNCTIONS` | Vercel Production and Preview | Set to `1` so the OCR runtime can exceed the standard Python bundle limit |
 | `MAX_UPLOAD_BYTES` | Optional Vercel setting | Additional backend upload cap |
 | `LIBRETRANSLATE_URL` | Optional Vercel setting | Translation provider URL |
 | `LIBRETRANSLATE_API_KEY` | Optional Vercel secret | Translation provider credential |
