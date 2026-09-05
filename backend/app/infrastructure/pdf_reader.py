@@ -19,6 +19,7 @@ except Exception:  # pragma: no cover - optional dependency protection
 try:
     from rapidocr import RapidOCR
 except Exception:  # pragma: no cover - optional dependency protection
+    logger.warning("RapidOCR could not be imported; scanned-page OCR is unavailable.", exc_info=True)
     RapidOCR = None
 
 _tesseract_available = False
