@@ -1,0 +1,10 @@
+{
+  "name": "pdf-reader-blob-upload",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "dependencies": {
+    "@vercel/blob": "2.8.0",
+    "express": "5.1.0"
+  }
+}

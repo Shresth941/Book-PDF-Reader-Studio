@@ -14,10 +14,11 @@ The repository uses Vercel Services to build two applications in one project:
 
 - `frontend`: the React and Vite user interface
 - `backend`: the Python FastAPI document and language API
+- `blob_upload`: the Express endpoint that issues short-lived Blob upload tokens
 
 Requests under `/api/` are routed to FastAPI, except `/api/blob-upload`, which
-generates short-lived upload authorization for the frontend. All other requests
-go to the Vite frontend.
+is routed to the Express service to generate short-lived upload authorization
+for the frontend. All other requests go to the Vite frontend.
 
 PDFs upload directly from the browser to a private Vercel Blob store. The
 FastAPI Function reads the private blob only when extracting the selected page

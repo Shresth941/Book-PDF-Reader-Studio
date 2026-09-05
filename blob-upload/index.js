@@ -1,13 +1,17 @@
+import express from "express";
 import { handleUpload } from "@vercel/blob/client";
 
+const app = express();
 const MAX_PDF_BYTES = 25 * 1024 * 1024;
 
-export async function POST(request) {
+app.use(express.json({ limit: "64kb" }));
+
+app.post("/api/blob-upload", async (request, response) => {
   try {
-    const body = await request.json();
-    const response = await handleUpload({
-      body,
+    const result = await handleUpload({
+      body: request.body,
       request,
+      token: process.env.BLOB_READ_WRITE_TOKEN,
       onBeforeGenerateToken: async (pathname) => {
         if (!pathname.startsWith("documents/") || !pathname.toLowerCase().endsWith(".pdf")) {
           throw new Error("Only PDF documents are accepted.");
@@ -21,11 +25,12 @@ export async function POST(request) {
       },
       onUploadCompleted: async () => {},
     });
-    return Response.json(response);
+    response.json(result);
   } catch (error) {
-    return Response.json(
-      { error: error instanceof Error ? error.message : "Unable to authorize the PDF upload." },
-      { status: 400 },
-    );
+    response.status(400).json({
+      error: error instanceof Error ? error.message : "Unable to authorize the PDF upload.",
+    });
   }
-}
+});
+
+export default app;

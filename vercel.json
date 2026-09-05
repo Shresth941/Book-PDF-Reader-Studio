@@ -12,12 +12,17 @@
       "root": "backend/",
       "framework": "fastapi",
       "entrypoint": "app.main:app"
+    },
+    "blob_upload": {
+      "root": "blob-upload/",
+      "framework": "express",
+      "entrypoint": "index.js"
     }
   },
   "rewrites": [
     {
       "source": "/api/blob-upload",
-      "destination": { "service": "frontend" }
+      "destination": { "service": "blob_upload" }
     },
     {
       "source": "/api/(.*)",
