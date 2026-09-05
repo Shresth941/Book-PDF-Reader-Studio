@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from uuid import UUID
 from fastapi import FastAPI, File, HTTPException, Query, UploadFile
@@ -12,7 +13,8 @@ from app.services.export_service import ExportService
 from app.services.language_service import DictionaryService, LibreTranslateService
 
 reader = PyMuPdfReader()
-documents = DocumentService(LocalDocumentStorage(settings.upload_dir, settings.max_upload_bytes), reader)
+runtime_upload_dir = Path("/tmp/pdf-reader-uploads") if os.getenv("VERCEL") else settings.upload_dir
+documents = DocumentService(LocalDocumentStorage(runtime_upload_dir, settings.max_upload_bytes), reader)
 blob_documents = VercelBlobDocumentStorage(settings.max_upload_bytes or 25 * 1024 * 1024)
 translator = LibreTranslateService(settings.libretranslate_url, settings.libretranslate_api_key)
 dictionary = DictionaryService(translator)
