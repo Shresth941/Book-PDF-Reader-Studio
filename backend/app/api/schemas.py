@@ -2,6 +2,17 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+
+class BlobDocumentRequest(BaseModel):
+    blob_url: str = Field(min_length=1)
+    filename: str = Field(min_length=1)
+
+
+class BlobPagesRequest(BaseModel):
+    blob_url: str = Field(min_length=1)
+    start: int = Field(ge=1)
+    end: int = Field(ge=1)
+
 class TranslateRequest(BaseModel):
     text: str = Field(min_length=1)
     source: str = Field(pattern="^(auto|en|hi)$")

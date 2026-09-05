@@ -32,6 +32,17 @@ def test_invalid_range_is_rejected(tmp_path):
     with pytest.raises(ValueError): PyMuPdfReader().extract(path, 2, 2)
 
 
+def test_pdf_bytes_can_be_read_without_persistent_disk():
+    pdf = fitz.open()
+    page = pdf.new_page()
+    page.insert_text((72, 72), "Serverless PDF")
+    content = pdf.tobytes()
+
+    reader = PyMuPdfReader()
+    assert reader.page_count_bytes(content) == 1
+    assert reader.extract_bytes(content, 1, 1) == [{"page": 1, "text": "Serverless PDF"}]
+
+
 def test_legacy_hindi_font_is_omitted_but_english_spans_are_kept():
     class FakePage:
         def get_text(self, mode, sort=True):

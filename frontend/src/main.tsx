@@ -355,35 +355,13 @@ function App() {
     const last = Math.max(start, end);
 
     runAsync(`Extracting text from pages ${first}–${last}…`, async () => {
-      // Read one page at a time so the first readable page appears as soon as
-      // it is ready instead of making the reader wait for a whole scan range.
-      // The API's page cache makes a repeated range instantaneous, while a
-      // small two-request queue avoids overloading a laptop on image-heavy PDFs.
-      const extractedPages = new Map<number, string>();
-      const formatDraft = () => Array.from(extractedPages.entries())
-        .sort(([left], [right]) => left - right)
-        .map(([page, text]) => `── Page ${page} ──\n\n${text || "[No selectable text found on this page]"}`)
+      // A hosted PDF lives in private Blob storage. Reading the selected range
+      // in one request downloads that private file only once per operation.
+      const response = await fetchPages(doc.id, first, last);
+      const formattedDraft = response.pages
+        .map(({ page, text }) => `── Page ${page} ──\n\n${text || "[No selectable text found on this page]"}`)
         .join("\n\n");
-      const readOnePage = async (page: number) => {
-        const response = await fetchPages(doc.id, page, page);
-        const extracted = response.pages[0];
-        extractedPages.set(page, extracted?.text || "");
-        setDraftText(formatDraft());
-        setStatus({
-          type: "info",
-          text: `Reading page ${extractedPages.size} of ${last - first + 1}…`,
-        });
-      };
-
-      await readOnePage(first);
-      const waitingPages = Array.from({ length: last - first }, (_, index) => first + index + 1);
-      const workerCount = Math.min(2, waitingPages.length);
-      await Promise.all(Array.from({ length: workerCount }, async () => {
-        while (waitingPages.length) {
-          const nextPage = waitingPages.shift();
-          if (nextPage !== undefined) await readOnePage(nextPage);
-        }
-      }));
+      setDraftText(formattedDraft);
       setDraftLanguage("auto");
       setFindMatchIndex(-1);
       setHasActiveSelection(false);

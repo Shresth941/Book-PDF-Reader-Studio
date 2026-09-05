@@ -1,4 +1,7 @@
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+import { upload } from "@vercel/blob/client";
+
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.PROD ? "" : "http://localhost:8000");
+const USE_BLOB_STORAGE = import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL;
 
 export interface DocumentInfo {
   id: string;
@@ -31,7 +34,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     response = await fetch(`${BASE_URL}${path}`, init);
   } catch (error) {
     throw new Error(
-      "Unable to connect to the backend server. Please make sure the FastAPI server is running on port 8000."
+      "Unable to connect to the PDF service. Please try again."
     );
   }
 
@@ -53,12 +56,24 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export const checkHealth = (): Promise<{ status: string }> => call("/health");
+export const checkHealth = (): Promise<{ status: string }> => call("/api/health");
 
-export const uploadPdf = (file: File): Promise<DocumentInfo> => {
+export const uploadPdf = async (file: File): Promise<DocumentInfo> => {
+  if (USE_BLOB_STORAGE) {
+    const blob = await upload(`documents/${crypto.randomUUID()}-${file.name}`, file, {
+      access: "private",
+      handleUploadUrl: "/api/blob-upload",
+      multipart: file.size > 5 * 1024 * 1024,
+    });
+    return call<DocumentInfo>("/api/documents/blob", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ blob_url: blob.url, filename: file.name }),
+    });
+  }
   const form = new FormData();
   form.append("file", file);
-  return call<DocumentInfo>("/documents", {
+  return call<DocumentInfo>("/api/documents", {
     method: "POST",
     body: form,
   });
@@ -68,8 +83,16 @@ export const fetchPages = (
   id: string,
   start: number,
   end: number
-): Promise<ExtractedPagesResponse> =>
-  call<ExtractedPagesResponse>(`/documents/${id}/pages?start=${start}&end=${end}`);
+): Promise<ExtractedPagesResponse> => {
+  if (USE_BLOB_STORAGE) {
+    return call<ExtractedPagesResponse>("/api/documents/blob/pages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ blob_url: id, start, end }),
+    });
+  }
+  return call<ExtractedPagesResponse>(`/api/documents/${id}/pages?start=${start}&end=${end}`);
+};
 
 export const translateText = (
   text: string,
@@ -77,7 +100,7 @@ export const translateText = (
   source: string = "auto",
   documentTitle: string = ""
 ): Promise<TranslateResponse> =>
-  call<TranslateResponse>("/translate", {
+  call<TranslateResponse>("/api/translate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text, source, target, document_title: documentTitle }),
@@ -90,7 +113,7 @@ export const lookupDefinition = (
   documentTitle: string = "",
   documentId: string = ""
 ): Promise<DefinitionsResponse> =>
-  call<DefinitionsResponse>("/definitions", {
+  call<DefinitionsResponse>("/api/definitions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -105,7 +128,7 @@ export const lookupDefinition = (
 export const downloadDraft = async (text: string, format: ExportFormat): Promise<Blob> => {
   let response: Response;
   try {
-    response = await fetch(`${BASE_URL}/exports`, {
+    response = await fetch(`${BASE_URL}/api/exports`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text, format }),

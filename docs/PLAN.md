@@ -25,10 +25,10 @@ Routes depend on services; services depend on narrow adapters. Therefore a local
 ## Core flow
 
 ```
-Browser -> POST /documents -> private temporary file -> PDF validation
-Browser -> GET /documents/{id}/pages -> extraction service -> text draft
-Browser -> POST /translate -> configured translator -> translated draft
-Browser -> POST /definitions -> dictionary provider -> definitions
+Browser -> direct private Blob upload -> POST /api/documents/blob -> PDF validation
+Browser -> POST /api/documents/blob/pages -> extraction service -> text draft
+Browser -> POST /api/translate -> configured translator -> translated draft
+Browser -> POST /api/definitions -> dictionary provider -> definitions
 ```
 
 The document id is a UUID. Add authentication and document ownership checks before multi-user use.
@@ -42,11 +42,15 @@ The document id is a UUID. Add authentication and document ownership checks befo
 5. Configure LibreTranslate and test English → Hindi and Hindi → English.
 6. Select an English word and test definition lookup; empty results are handled.
 
-## Vercel + Render
+## Vercel Hobby deployment
 
-Frontend: import repository in Vercel, set Root Directory to `frontend`, and set `VITE_API_BASE_URL=https://<render-service>.onrender.com`.
+The repository deploys both applications through Vercel Services. The Vite
+frontend is the `frontend` service and FastAPI is the `backend` service. Root
+rewrites keep the public application and API on the same domain.
 
-Backend: create a Render Web Service with Root Directory `backend`, build command `pip install -r requirements.txt`, and start command `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Set `ALLOWED_ORIGINS` to the exact Vercel domain.
+Production PDF uploads go directly to a private Vercel Blob store, avoiding the
+Vercel Function request body limit. Vercel provides `BLOB_READ_WRITE_TOKEN` to
+the project automatically when the private store is connected.
 
 ## Security and scale before public launch
 

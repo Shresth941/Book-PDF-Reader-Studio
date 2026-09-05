@@ -275,7 +275,7 @@ npm run dev -- --host 0.0.0.0 --port 5173
 
 ## API endpoints
 
-### GET /health
+### GET /api/health
 
 Returns whether the backend is running.
 
@@ -287,25 +287,25 @@ Example response:
 }
 ```
 
-### POST /documents
+### POST /api/documents
 
 Uploads a PDF file and returns document metadata.
 
 The frontend sends a file as multipart form data and receives a document identifier, filename, and page count.
 
-### GET /documents/{identifier}/pages
+### GET /api/documents/{identifier}/pages
 
 Gets extracted text for a selected page range.
 
 This is the main document-reading endpoint. It allows the user to choose page boundaries and retrieve the text data for those pages.
 
-### POST /translate
+### POST /api/translate
 
 Translates supplied text.
 
 This endpoint is designed for text processing and is useful in bilingual reading and learning workflows.
 
-### POST /definitions
+### POST /api/definitions
 
 Returns dictionary-style definitions for a term.
 

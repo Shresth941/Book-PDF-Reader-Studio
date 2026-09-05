@@ -613,19 +613,31 @@ class PyMuPdfReader:
         # than sparse-text mode, which was designed for unrelated fragments.
         return cls._tesseract_ocr_page(page, 4)
 
+    def _extract_document(self, pdf: fitz.Document, start: int, end: int) -> list[dict[str, str | int]]:
+        if start < 1 or end < 1 or start > pdf.page_count or end > pdf.page_count:
+            raise ValueError(f"Select pages between 1 and {pdf.page_count}.")
+        normalized_start, normalized_end = sorted((start, end))
+        pages: list[dict[str, str | int]] = []
+        for page_number in range(normalized_start, normalized_end + 1):
+            page = pdf.load_page(page_number - 1)
+            text = self._extract_ordered_text(page)
+            if self._needs_scan_ocr(page, text):
+                ocr_text = self._ocr_page(page)
+                if ocr_text:
+                    text = ocr_text
+            text = self._clean_text(text)
+            pages.append({"page": page_number, "text": text})
+        return pages
+
     def extract(self, path: Path, start: int, end: int) -> list[dict[str, str | int]]:
         with fitz.open(path) as pdf:
-            if start < 1 or end < 1 or start > pdf.page_count or end > pdf.page_count:
-                raise ValueError(f"Select pages between 1 and {pdf.page_count}.")
-            normalized_start, normalized_end = sorted((start, end))
-            pages: list[dict[str, str | int]] = []
-            for page_number in range(normalized_start, normalized_end + 1):
-                page = pdf.load_page(page_number - 1)
-                text = self._extract_ordered_text(page)
-                if self._needs_scan_ocr(page, text):
-                    ocr_text = self._ocr_page(page)
-                    if ocr_text:
-                        text = ocr_text
-                text = self._clean_text(text)
-                pages.append({"page": page_number, "text": text})
-            return pages
+            return self._extract_document(pdf, start, end)
+
+    def extract_bytes(self, content: bytes, start: int, end: int) -> list[dict[str, str | int]]:
+        with fitz.open(stream=content, filetype="pdf") as pdf:
+            return self._extract_document(pdf, start, end)
+
+    @staticmethod
+    def page_count_bytes(content: bytes) -> int:
+        with fitz.open(stream=content, filetype="pdf") as pdf:
+            return pdf.page_count
