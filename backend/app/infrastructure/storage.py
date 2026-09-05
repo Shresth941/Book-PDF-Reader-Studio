@@ -70,23 +70,22 @@ class VercelBlobDocumentStorage:
             raise HTTPException(503, "Vercel Blob support is not installed.")
 
         try:
-            result = await AsyncBlobClient().get(blob_url, access="private")
+            async with AsyncBlobClient() as client:
+                result = await client.get(blob_url, access="private")
         except Exception as error:
             raise HTTPException(502, "Unable to read the private PDF upload.") from error
-        if result is None or result.status_code != 200 or result.stream is None:
+        if result is None or result.status_code != 200:
             raise HTTPException(404, "Document not found or expired.")
         if (
             self.max_bytes is not None
-            and result.blob.size is not None
-            and result.blob.size > self.max_bytes
+            and result.size is not None
+            and result.size > self.max_bytes
         ):
             raise HTTPException(413, "PDF exceeds the configured upload limit.")
 
-        content = bytearray()
-        async for chunk in result.stream:
-            content.extend(chunk)
-            if self.max_bytes is not None and len(content) > self.max_bytes:
-                raise HTTPException(413, "PDF exceeds the configured upload limit.")
+        content = result.content
+        if self.max_bytes is not None and len(content) > self.max_bytes:
+            raise HTTPException(413, "PDF exceeds the configured upload limit.")
         if content[:5] != b"%PDF-":
             raise HTTPException(415, "The uploaded file is not a valid PDF.")
-        return bytes(content)
+        return content
