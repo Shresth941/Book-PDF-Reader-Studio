@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opencv-python"
+version = "5.0.0.93"
+description = "Dependency shim selecting headless OpenCV for serverless OCR."
+requires-python = ">=3.9"
+dependencies = ["opencv-python-headless==5.0.0.93"]
+
+[tool.setuptools]
+packages = []
