@@ -1,10 +1,13 @@
 import io
+import logging
 import re
 import shutil
 from threading import Lock
 from pathlib import Path
 
 import fitz
+
+logger = logging.getLogger(__name__)
 
 try:
     import pytesseract
@@ -332,6 +335,7 @@ class PyMuPdfReader:
                     lines.append(line)
             return cls._clean_ocr_lines(lines) if lines else ""
         except Exception:
+            logger.warning("RapidOCR failed while processing a scanned page.", exc_info=True)
             _rapid_ocr_failed = True
             return ""
 
