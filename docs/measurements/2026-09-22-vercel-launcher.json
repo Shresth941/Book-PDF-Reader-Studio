@@ -1,0 +1,46 @@
+{
+  "date": "2026-09-22",
+  "production": "https://book-pdf-reader-studio.vercel.app",
+  "deployment_id": "dpl_7TNN8QT6d9EvANDbWpmzFA1YoiRX",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "exact_sha256": true,
+      "security_headers": true
+    },
+    {
+      "path": "/assets/index-BRXG-BBW.css",
+      "status": 200,
+      "exact_sha256": true,
+      "security_headers": true
+    },
+    {
+      "path": "/assets/index-CfgdTY5Y.js",
+      "status": 200,
+      "exact_sha256": true,
+      "security_headers": true
+    },
+    {
+      "path": "/api/health",
+      "status": 404
+    },
+    {
+      "path": "/api/v2/documents",
+      "status": 404
+    },
+    {
+      "path": "/backend/local-data",
+      "status": 404
+    },
+    {
+      "path": "/backend/models",
+      "status": 404
+    },
+    {
+      "path": "/.env",
+      "status": 404
+    }
+  ],
+  "scope": "Static launcher only; local PDF engine remains on user computer."
+}

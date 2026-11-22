@@ -134,8 +134,8 @@ def _document_domain(*parts: str) -> str:
         "contract", "property", "appeal", "witness", "अधिनियम", "धारा", "न्यायालय",
         "सुखाचार", "सुखाधिकार", "अधिकारिता",
     )
-    hits = sum(marker in text for marker in legal_markers)
-    title_signal = any(marker in text[:300] for marker in ("act", "law", "legal", "court", "अधिनियम"))
+    hits = sum(bool(re.search(r"(?<!\w)" + re.escape(marker) + r"(?!\w)", text)) for marker in legal_markers)
+    title_signal = any(re.search(r"(?<!\w)" + re.escape(marker) + r"(?!\w)", text[:300]) for marker in ("act", "law", "legal", "court", "अधिनियम"))
     return "legal" if hits >= 2 or title_signal else "general"
 
 
@@ -316,10 +316,6 @@ class LibreTranslateService:
                 )))
         result = _restore_legal_terms("".join(translated), legal_replacements)
         self._cache.set(cache_key, result)
-        # A common reader workflow is English -> Hindi -> English. The second
-        # operation can return the exact original draft immediately, including
-        # when a public provider is temporarily unavailable.
-        self._cache.set((target, resolved_source, domain, result), text)
         return result
 
 

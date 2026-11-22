@@ -16,22 +16,26 @@ class DocumentService:
     def pages(self, identifier: UUID, start: int, end: int):
         normalized_start, normalized_end = sorted((start, end))
         missing_runs: list[tuple[int, int]] = []
+        # Request-owned results survive eviction from the bounded shared cache.
+        results: dict[int, dict] = {}
         run_start: int | None = None
         for page_number in range(normalized_start, normalized_end + 1):
-            if self._page_cache.get((identifier, page_number)) is None:
+            cached = self._page_cache.get((identifier, page_number))
+            if cached is None:
                 run_start = page_number if run_start is None else run_start
-            elif run_start is not None:
-                missing_runs.append((run_start, page_number - 1))
-                run_start = None
+            else:
+                results[page_number] = dict(cached)
+                if run_start is not None:
+                    missing_runs.append((run_start, page_number - 1))
+                    run_start = None
         if run_start is not None:
             missing_runs.append((run_start, normalized_end))
 
         path = self.storage.path_for(identifier)
         for run_start, run_end in missing_runs:
             for page in self.reader.extract(path, run_start, run_end):
+                results[int(page["page"])] = dict(page)
                 self._page_cache.set((identifier, int(page["page"])), dict(page))
-
-        return [
-            dict(self._page_cache.get((identifier, page_number)) or {"page": page_number, "text": ""})
-            for page_number in range(normalized_start, normalized_end + 1)
-        ]
+        if any(number not in results for number in range(normalized_start, normalized_end + 1)):
+            raise ValueError("Extraction did not return every requested page. Retry the missing pages.")
+        return [results[number] for number in range(normalized_start, normalized_end + 1)]

@@ -1,7 +1,7 @@
 import { upload } from "@vercel/blob/client";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.PROD ? "" : "http://localhost:8000");
-const USE_BLOB_STORAGE = import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL;
+const USE_BLOB_STORAGE = import.meta.env.VITE_RUNTIME_MODE === "hosted";
 
 export interface DocumentInfo {
   id: string;

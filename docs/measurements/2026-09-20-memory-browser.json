@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "scope": "Mocked RAM snapshots exercise the real frontend; no user records modified",
+  "checks": [
+    "unknown page count is explicit",
+    "current and required RAM visible",
+    "memory vs disk guidance",
+    "retry remains available",
+    "refresh shows recovered memory",
+    "no browser exceptions"
+  ]
+}

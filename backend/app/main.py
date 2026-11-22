@@ -20,7 +20,7 @@ translator = LibreTranslateService(settings.libretranslate_url, settings.libretr
 dictionary = DictionaryService(translator)
 exporter = ExportService()
 app = FastAPI(title="Private PDF Reader API", version="0.1.0")
-app.add_middleware(CORSMiddleware, allow_origins=settings.origins, allow_credentials=False, allow_methods=["GET", "POST"], allow_headers=["Content-Type"])
+app.add_middleware(CORSMiddleware, allow_origins=settings.origins, allow_credentials=False, allow_methods=["GET", "POST", "PATCH"], allow_headers=["Content-Type", "X-Review-Token"])
 
 @app.get("/api/health")
 def health(): return {"status": "ok"}
@@ -85,3 +85,16 @@ async def export_draft(payload: ExportRequest):
         media_type=media_type,
         headers={"Content-Disposition": f'attachment; filename="pdf-reader-draft.{extension}"'},
     )
+
+
+from app.api.review_routes import ReviewAPI
+review_api = ReviewAPI(settings)
+review_api.install(app)
+
+# The packaged local app is served by the same loopback process as its API.
+if settings.runtime_mode == "local":
+    from fastapi.staticfiles import StaticFiles
+    frontend_dist = Path(__file__).resolve().parents[2] / "frontend" / "dist"
+    # main.py is backend/app/main.py; the project root is parents[2].
+    if frontend_dist.is_dir():
+        app.mount("/", StaticFiles(directory=frontend_dist, html=True), name="local-workspace")

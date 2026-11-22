@@ -1,0 +1,27 @@
+{
+  "recorded": "2026-09-26",
+  "platform": "CPython 3.12 / Linux x86_64",
+  "note": "Official PyPI metadata for matching model runtime versions. This is provenance, not a complete transitive dependency lock or Linux qualification result.",
+  "packages": {
+    "ctranslate2==4.8.2": {
+      "metadata": "https://pypi.org/pypi/ctranslate2/4.8.2/json",
+      "wheel": "ctranslate2-4.8.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "554a0b2abf098a11c66ef7930c0a05b3de683a455e8ea3f2e6ab6966aaabc136"
+    },
+    "sentencepiece==0.2.2": {
+      "metadata": "https://pypi.org/pypi/sentencepiece/0.2.2/json",
+      "wheel": "sentencepiece-0.2.2-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "c8a168b040bc61681293f79a949b5d911c8e25086f4260285b8d97ab5f1195da"
+    },
+    "numpy==2.5.3": {
+      "metadata": "https://pypi.org/pypi/numpy/2.5.3/json",
+      "wheel": "numpy-2.5.3-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "b7e18c623bb5c95acb3b3328861272816ba199fb531921c5d6d0b675f1fde9e3"
+    },
+    "PyYAML==6.0.3": {
+      "metadata": "https://pypi.org/pypi/PyYAML/6.0.3/json",
+      "wheel": "pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "sha256": "ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc"
+    }
+  }
+}

@@ -19,7 +19,7 @@ except Exception:  # pragma: no cover - optional dependency protection
 try:
     from rapidocr import RapidOCR
 except Exception:  # pragma: no cover - optional dependency protection
-    logger.warning("RapidOCR could not be imported; scanned-page OCR is unavailable.", exc_info=True)
+    logger.info("Optional legacy RapidOCR is absent; the local review pipeline uses Tesseract.")
     RapidOCR = None
 
 _tesseract_available = False
@@ -49,7 +49,7 @@ class PyMuPdfReader:
     # (rather than Unicode). PDF libraries then return text such as ``?kks\"k.kk``.
     # The name check is deliberately narrow: a regular font that happens to contain
     # punctuation must never have its text removed.
-    _legacy_font_hints = ("shiva", "kruti", "chanakya", "devlys")
+    _legacy_font_hints = ("shiva", "kruti", "chanak", "devlys")
     _windows_punctuation = str.maketrans({
         "\x91": "'",
         "\x92": "'",
@@ -118,7 +118,7 @@ class PyMuPdfReader:
         if len(lines) < 6:
             return False
         short_fragments = sum(
-            len(re.sub(r"[^\\w]", "", line, flags=re.UNICODE)) <= 3
+            len(re.sub(r"[^\w]", "", line, flags=re.UNICODE)) <= 3
             for line in lines
         )
         return short_fragments > max(3, len(lines) * 0.35)
@@ -195,43 +195,13 @@ class PyMuPdfReader:
         return match.group(1).replace(" ", "") if match else ""
 
     def _extract_ordered_text(self, page: fitz.Page) -> str:
-        """Use positioned spans to preserve order and skip legacy-font gibberish."""
+        """Preserve raw legacy spans; the review pipeline flags unreliable encoding."""
         try:
-            text_dict = page.get_text("dict", sort=True)
-            legacy_fonts = self._legacy_encoded_fonts(text_dict)
-            # Do not discard a whole language from a legacy-font-only PDF. This
-            # fallback is for bilingual documents where an extractable English
-            # alternative is present alongside the malformed legacy glyphs.
-            non_legacy_text = "".join(
-                str(span.get("text", ""))
-                for block in text_dict.get("blocks", [])
-                for line in block.get("lines", [])
-                for span in line.get("spans", [])
-                if str(span.get("font", "")) not in legacy_fonts
-            )
-            if sum(char.isalnum() for char in non_legacy_text) < 10:
-                legacy_fonts.clear()
-            blocks: list[str] = []
-            for block in text_dict.get("blocks", []):
-                lines: list[str] = []
-                for line in block.get("lines", []):
-                    parts: list[str] = []
-                    pending_field_prefix = ""
-                    for span in line.get("spans", []):
-                        span_text = str(span.get("text", ""))
-                        if str(span.get("font", "")) in legacy_fonts:
-                            pending_field_prefix = pending_field_prefix or self._field_number_prefix(span_text)
-                            continue
-                        if span_text.strip() and pending_field_prefix:
-                            parts.append(pending_field_prefix)
-                            pending_field_prefix = ""
-                        parts.append(span_text)
-                    line_text = "".join(parts).strip()
-                    if line_text:
-                        lines.append(line_text)
-                block_text = "\n".join(lines).strip()
-                if block_text:
-                    blocks.append(block_text)
+            blocks = []
+            for block in page.get_text("dict", sort=True).get("blocks", []):
+                lines = ["".join(str(span.get("text", "")) for span in line.get("spans", [])) for line in block.get("lines", [])]
+                if lines:
+                    blocks.append("\n".join(lines))
             return self._clean_text("\n\n".join(blocks))
         except Exception:
             return self._clean_text(page.get_text())
@@ -258,34 +228,8 @@ class PyMuPdfReader:
 
     @classmethod
     def _clean_ocr_lines(cls, lines: list[str]) -> str:
-        """Remove OCR artifacts and restore words split at a printed line end.
-
-        This intentionally makes only mechanical corrections. It never tries to
-        guess a whole word from a dictionary, because a confident-looking
-        guess is worse than preserving a doubtful word for the reader to
-        verify against the adjacent PDF page.
-        """
-        cleaned_lines: list[str] = []
-        for raw_line in lines:
-            line = raw_line.replace("\ufffd", "").replace("\u00ad", "")
-            line = line.replace("_", " ")
-            # OCR occasionally loses punctuation between two words, producing
-            # text such as "respectivelyThey". Preserve both words instead of
-            # presenting a corrupted single token.
-            line = re.sub(r"(?<=[a-z0-9.])(?=[A-Z])", " ", line)
-            line = cls._format_ocr_line(line)
-            if line:
-                cleaned_lines.append(line)
-
-        joined_lines: list[str] = []
-        for line in cleaned_lines:
-            if joined_lines and re.search(r"[A-Za-z]-$", joined_lines[-1]) and re.match(r"^[a-z]", line):
-                # Preserve normal hyphens inside a line, but repair a word
-                # broken only because the printed source wrapped it.
-                joined_lines[-1] = joined_lines[-1][:-1] + line
-            else:
-                joined_lines.append(line)
-        return cls._clean_text("\n".join(joined_lines))
+        """Keep uncertainty, underscores, case and line-end hyphens for review."""
+        return "\n".join(line.rstrip("\r\n") for line in lines).strip()
 
     @staticmethod
     def _is_contents_style(lines: list[str]) -> bool:
@@ -328,16 +272,11 @@ class PyMuPdfReader:
                     score = 1.0
                 # Discard only isolated, low-confidence scan noise. Short
                 # legitimate labels such as Roman numerals are retained.
-                if score < 0.65 and len(line) <= 3 and not cls._is_roman_numeral(line):
-                    continue
-                if len(line) == 1 and line.islower():
-                    continue
                 if line:
                     lines.append(line)
             return cls._clean_ocr_lines(lines) if lines else ""
         except Exception:
             logger.warning("RapidOCR failed while processing a scanned page.", exc_info=True)
-            _rapid_ocr_failed = True
             return ""
 
     @classmethod
@@ -367,55 +306,8 @@ class PyMuPdfReader:
 
     @staticmethod
     def _repair_contents_numbering(lines: list[str]) -> list[str]:
-        """Correct only strongly evidenced OCR slips in a consecutive contents list."""
-        label_pattern = re.compile(r"^(?P<label>\d{1,3}|\d[A-Za-z])\.?(?=\s+[A-Z\"“])")
-        labels: list[tuple[int, re.Match[str], int | None]] = []
-        for index, line in enumerate(lines):
-            match = label_pattern.match(line)
-            if match:
-                raw_label = match.group("label")
-                labels.append((index, match, int(raw_label) if raw_label.isdigit() else None))
-
-        corrected = list(lines)
-        previous_number: int | None = None
-        consecutive_matches = 0
-        for label_index, (line_index, match, number) in enumerate(labels):
-            if previous_number is None:
-                if number is not None:
-                    previous_number = number
-                    consecutive_matches = 1
-                continue
-
-            expected = previous_number + 1
-            if number == expected:
-                previous_number = number
-                consecutive_matches += 1
-                continue
-
-            next_number = next(
-                (candidate for _, _, candidate in labels[label_index + 1:] if candidate is not None),
-                None,
-            )
-            raw_label = match.group("label")
-            is_verified_correction = (
-                consecutive_matches >= 3
-                and (
-                    number is None and raw_label.startswith(str(expected)[0])
-                    or number is not None and number > 99 and next_number == expected + 1
-                    or number is not None and number % 10 == expected % 10 and abs(number - expected) >= 10
-                )
-            )
-            if is_verified_correction:
-                corrected[line_index] = f"{expected}." + corrected[line_index][match.end():]
-                previous_number = expected
-                consecutive_matches += 1
-            elif number is not None:
-                previous_number = number
-                consecutive_matches = 1
-            else:
-                previous_number = None
-                consecutive_matches = 0
-        return corrected
+        """Numbering changes require review; preserve nonconsecutive labels."""
+        return list(lines)
 
     @classmethod
     def _rebuild_positioned_ocr_lines(cls, data: dict) -> str:
@@ -581,7 +473,7 @@ class PyMuPdfReader:
             if page_segmentation_mode == 11:
                 data = pytesseract.image_to_data(
                     image,
-                    lang="eng",
+                    lang="hin+eng",
                     config="--oem 3 --psm 11",
                     output_type=pytesseract.Output.DICT,
                     timeout=18,
@@ -589,7 +481,7 @@ class PyMuPdfReader:
                 return cls._rebuild_positioned_ocr_lines(data)
             text = pytesseract.image_to_string(
                 image,
-                lang="eng",
+                lang="hin+eng",
                 config=f"--oem 3 --psm {page_segmentation_mode}",
                 timeout=18,
             )

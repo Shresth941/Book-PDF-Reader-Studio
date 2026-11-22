@@ -1,7 +1,11 @@
 import fitz
+import os
+import pytest
 import httpx
 from fastapi.testclient import TestClient
 from app.main import app, documents
+
+pytestmark = pytest.mark.skipif(os.environ.get("RUN_LEGACY_LIVE_TESTS") != "1", reason="Legacy hosted-provider integration is explicitly opt-in; the local v2 API has isolated tests.")
 
 def test_full_pipeline_with_test_client(tmp_path):
     # Keep integration uploads out of the running application's persistent

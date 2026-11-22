@@ -1,0 +1,48 @@
+[project]
+name = "pdf-reader-studio-hosted"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi==0.115.6",
+  "uvicorn==0.34.0",
+  "python-multipart==0.0.20",
+  "pymupdf==1.25.1",
+  "httpx==0.28.1",
+  "pydantic-settings==2.7.1",
+  "pytesseract==0.3.13",
+  "Pillow==11.3.0",
+  "opencv-python-headless==5.0.0.93",
+  "rapidocr==3.9.2",
+  "onnxruntime==1.29.0",
+  "python-docx==1.2.0",
+  "reportlab==4.4.9",
+  "psutil==7.0.0",
+  "fpdf2==2.8.8",
+  "uharfbuzz==0.56.1",
+  "fonttools==4.59.0",
+  "vercel==0.11.4",
+  "vercel-queue==0.9.0",
+  "cryptography==46.0.3",
+  "ctranslate2==4.8.2",
+  "sentencepiece==0.2.2",
+  "numpy==2.5.3",
+  "PyYAML==6.0.3",
+  "sacremoses==0.2.0",
+  "regex==2026.9.10",
+  "joblib==1.6.0",
+  "cloudpickle==3.1.2",
+  "tqdm==4.70.1",
+  "click==8.5.0",
+]
+
+[tool.vercel]
+entrypoint = "app.hosting.app:app"
+
+[tool.vercel.scripts]
+build = "python build_native.py"
+
+[[tool.vercel.subscribers]]
+entrypoint = "app.hosting.queue_worker:process_message"
+
+# Frontend files are staged in public/ and served by Vercel's CDN.
+# User documents, databases and private Blob contents never belong in public/.

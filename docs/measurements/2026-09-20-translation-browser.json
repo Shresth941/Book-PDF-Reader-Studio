@@ -1,0 +1,44 @@
+{
+  "passed": true,
+  "scope": "Real local inference and review workflow smoke; not translation-quality qualification",
+  "model": {
+    "available": true,
+    "reason": "Local draft model: review every translation. Bilingual/legal quality is not certified.",
+    "provider": "marian-ct2",
+    "model": "Helsinki-NLP/Tatoeba-MT-eng-hin",
+    "revision": "opus+bt-2021-04-10",
+    "draft_only": true,
+    "quality_qualified": false
+  },
+  "limits": {
+    "pages": 1000,
+    "bytes": 524288000,
+    "worker_memory_mb": 3072
+  },
+  "initial_resources": {
+    "memory": {
+      "available_mb": 1158,
+      "total_mb": 7955,
+      "required_mb": 1024,
+      "can_start_worker": true
+    }
+  },
+  "document_id": "7784389c-ec51-4cc9-a374-4d8500cb23eb",
+  "translation_job": "07cf7027-e190-4a36-b5da-b8074c80faed",
+  "translation_ms": 2325,
+  "source": "The debtor shall pay 100 rupees.",
+  "draft": "ऋणी को १०० रुपये का भुगतान करना चाहिए।",
+  "checks": [
+    "actual Marian local provider available",
+    "source review required before generation",
+    "real Hindi draft from UI job",
+    "model does not approve translation or page completeness",
+    "legal scope and fact relationship warnings remain visible",
+    "unreviewed draft blocks final download",
+    "export preview decoded",
+    "draft persists after reload",
+    "no browser exceptions",
+    "no external browser requests"
+  ],
+  "screenshots": "tmp/translation-browser-qa"
+}

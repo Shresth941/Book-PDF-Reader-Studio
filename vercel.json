@@ -1,36 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "services": {
-    "frontend": {
-      "root": "frontend/",
-      "framework": "vite",
-      "buildCommand": "npm run build",
-      "installCommand": "npm ci",
-      "outputDirectory": "dist"
-    },
-    "backend": {
-      "root": "backend/",
-      "framework": "fastapi",
-      "entrypoint": "app.main:app"
-    },
-    "blob_upload": {
-      "root": "blob-upload/",
-      "framework": "express",
-      "entrypoint": "index.js"
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/api/blob-upload",
-      "destination": { "service": "blob_upload" }
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": { "service": "backend" }
-    },
-    {
-      "source": "/(.*)",
-      "destination": { "service": "frontend" }
-    }
-  ]
+  "framework": null,
+  "installCommand": "",
+  "buildCommand": "node -e \"throw new Error('Deploy the prepared static launcher; see docs/DEPLOYMENT.md')\""
 }

@@ -1,0 +1,16 @@
+# Optional offline Marian runtime. No torch, transformers, remote code, or cloud SDK.
+# Verified on CPython 3.12 / Windows x64, 2026-09-19 against the official PyPI
+# JSON endpoints https://pypi.org/pypi/<package>/<version>/json.
+# Hashes below pin the tested Windows wheels (pure-Python wheels where applicable).
+# Install: python -m pip install --only-binary=:all: --require-hashes -r requirements-translation.txt
+ctranslate2==4.8.2 --hash=sha256:d94421d565d0de61c032998f737a18942b0f2bef40c0424b1846ec6f67300105
+sentencepiece==0.2.2 --hash=sha256:7c6e7bf684dc12145bfa685d3060beaea55139134ba848289bee514ed42e7383
+numpy==2.5.3 --hash=sha256:0a59a421a32580a009e8a1751345bf829631b990dc1794b80514ab722b435def
+PyYAML==6.0.3 --hash=sha256:5fcd34e47f6e0b794d17de1b4ff496c00986e1c83f7ab2fb8fcfe9616ff7477b
+sacremoses==0.2.0 --hash=sha256:d413d118486b3a449f829566b3759a4b33bbc56b12496369316b52708585f594
+regex==2026.9.10 --hash=sha256:4db7d00c4afbfbb55b8e17b1e371da11418ea9389b030acec63c1fa4c7ad4b86
+joblib==1.6.0 --hash=sha256:3dbbf9f6e4b592a2357b854608e980fe6390d131d7a82f011a377ef2ebef7aba
+cloudpickle==3.1.2 --hash=sha256:9acb47f6afd73f60dc1df93bb801b472f05ff42fa6c84167d25cb206be1fbf4a
+tqdm==4.70.1 --hash=sha256:c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73
+click==8.5.0 --hash=sha256:255bc9599cf7748b4b1a446ccc735421bd08a2ae529a8b88597d3de5664ee360
+colorama==0.4.6 --hash=sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6

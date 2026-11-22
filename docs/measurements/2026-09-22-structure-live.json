@@ -1,0 +1,23 @@
+{
+  "date": "2026-09-22",
+  "passed": true,
+  "scope": "Codex browser interactions with real isolated FastAPI/SQLite and bounded inspection/extraction workers; one synthetic static form/table PDF; no model inference.",
+  "document_id": "17f4ddd2-a9e0-49e7-bb59-07d1f65a40a8",
+  "data_directory": "tmp/form-refresh-browser",
+  "worker_memory_limit_mb": 3072,
+  "minimum_free_memory_mb": 1024,
+  "available_memory_mb_before_form_preview": 1236,
+  "checks": [
+    "Bounded form evidence inspection leaves complete saved page unchanged",
+    "Unmapped saved field blocks apply in the browser",
+    "Identical refresh preserves complete page, revision, approved source and reviewer note",
+    "Manual table created through frontend and API with exact selected native region replacements",
+    "New cells remain unreadable and unapproved; original extraction and detector proposal are archived",
+    "Existing reviewed form source and note survive unrelated manual-table creation"
+  ],
+  "console_warnings_or_errors": [],
+  "limitations": [
+    "Synthetic fixture only; no general recognition or translation accuracy measured.",
+    "No target long-document workload qualification."
+  ]
+}

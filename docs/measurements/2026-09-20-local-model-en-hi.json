@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "scope": "synthetic API/runtime pilot; not a bilingual quality assessment",
+  "direction": "en-hi",
+  "pages": 3,
+  "elapsed_seconds": 24.25,
+  "worker_memory_limit_mb": 3072,
+  "test_free_memory_reserve_mb": 128,
+  "samples": [
+    {
+      "source": "This is a book.",
+      "translation": "यह पुस्तक है।",
+      "checks": []
+    },
+    {
+      "source": "Do not sign unless the amount is correct.",
+      "translation": "जब तक मात्रा ठीक न हो, हस्ताक्षर न करें।",
+      "checks": [
+        {
+          "code": "legal_scope",
+          "message": "Review obligations, permissions, negation and exceptions in their full clause context.",
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "source": "The debtor shall pay 100 rupees.",
+      "translation": "ऋणी को १०० रुपये का भुगतान करना चाहिए।",
+      "checks": [
+        {
+          "code": "legal_scope",
+          "message": "Review obligations, permissions, negation and exceptions in their full clause context.",
+          "blocking": true
+        },
+        {
+          "code": "fact_relationships",
+          "message": "Verify who owes/receives each amount, which action/date it belongs to, and its unit. Matching numbers alone is insufficient.",
+          "blocking": true
+        }
+      ]
+    }
+  ]
+}

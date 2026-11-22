@@ -1,0 +1,23 @@
+.hosted-workspace{min-height:100vh;background:#f3f5f0;color:#18332e;font:14px/1.55 Inter,"Segoe UI","Nirmala UI",sans-serif}
+.hosted-workspace *{box-sizing:border-box}
+.hosted-session-bar{display:flex;align-items:center;justify-content:space-between;gap:20px;background:#183f33;color:#fff;padding:12px 32px}
+.hosted-session-bar span{display:block;font-size:12px;color:#dce9e2}
+.hosted-workspace .hosted-session-bar button,.hosted-login-card button{font:inherit;border:1px solid #b8c9bf;border-radius:7px;background:#fff;color:#18332e;padding:9px 16px;cursor:pointer}
+.hosted-workspace .hosted-session-bar button:disabled,.hosted-login-card button:disabled{opacity:.6;cursor:wait}
+.hosted-quota-notice{margin:0;padding:12px 32px;background:#fff6e5;color:#684716;font-size:12px;border-bottom:1px solid #eadbc1}
+.hosted-login-shell{min-height:100vh;display:grid;place-items:center;padding:32px 20px}
+.hosted-login-card{width:100%;max-width:480px;padding:36px;background:#fff;border:1px solid #d7e1db;border-radius:14px;box-shadow:0 16px 60px #18332e0d}
+.hosted-login-card .hosted-eyebrow{font-size:10px;font-weight:700;letter-spacing:.15em;color:#537366;margin:0 0 12px}
+.hosted-login-card h1{font-size:30px;line-height:1.15;letter-spacing:-.03em;color:#18332e;margin:0 0 14px}
+.hosted-login-card h2{font-size:18px;letter-spacing:-.02em;color:#18332e;margin:28px 0 8px}
+.hosted-login-card p{margin:10px 0;color:#60716b}
+.hosted-login-card form{display:grid;gap:12px;margin:20px 0}
+.hosted-login-card label{font-size:13px;font-weight:600}
+.hosted-login-card input{font:inherit;width:100%;background:#fff;color:#18332e;border:1px solid #b8c9bf;border-radius:6px;padding:12px}
+.hosted-login-card input:focus,.hosted-login-card button:focus-visible,.hosted-session-bar button:focus-visible{outline:3px solid #76b99a;outline-offset:3px}
+.hosted-login-card button[type=submit]{background:#17664f;color:white;border-color:#17664f;font-weight:600}
+.hosted-workspace .hosted-auth-error{color:#91291f;background:#fff0ec;border:1px solid #f0c4b9;padding:12px 16px;margin:16px;border-radius:6px;overflow-wrap:anywhere}
+.hosted-login-card .hosted-auth-error{margin:16px 0}
+.hosted-login-card .hosted-auth-error p{color:inherit;margin:0 0 10px}
+.hosted-login-card .hosted-privacy{font-size:12px;padding-top:20px;border-top:1px solid #d7e1db;margin-top:24px}
+@media(max-width:600px){.hosted-session-bar{padding:12px 16px;align-items:flex-start}.hosted-quota-notice{padding:12px 16px}.hosted-login-card{padding:24px}}

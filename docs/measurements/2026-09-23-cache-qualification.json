@@ -1,0 +1,41 @@
+{
+  "date": "2026-09-23",
+  "scope": "Isolated cache, native page-coverage and durable checkpoint qualification",
+  "tests": "backend/tests/test_cache_qualification.py",
+  "result": {"passed": 18, "failed": 0, "skipped": 0, "warnings": 5, "seconds": 11.85},
+  "junit": "tmp/cache-qualification-20260923.xml",
+  "production_code_changed": false,
+  "native_pdf_cases": [512, 513, 740, 1000],
+  "native_pdf_assertions": [
+    "Every inspected page is inventoried in order",
+    "Exact unique native page text survives full forward and reversed requests",
+    "Reading after bounded 512-entry cache eviction retains complete request-owned results",
+    "Rotated native pages remain readable",
+    "Original PDF hashes are unchanged"
+  ],
+  "additional_cases": [
+    "1001-page original is rejected by the default inspection limit without modification",
+    "1000-page durable inventory survives SQLite reopen and caller-side mutations",
+    "LRU access order, replacement and TTL expiry",
+    "Document identity isolation and copied page return values",
+    "Missing-page and interrupted-reader retries preserve committed cache entries without false success",
+    "Four concurrent callers retain complete results during shared cache eviction",
+    "Legacy translation cache isolates language direction and domain without network calls",
+    "Target, domain, jurisdiction and glossary changes reject stale translation checkpoints",
+    "Restart invalidates old attempts; a new model revision publishes once and duplicate checkpoint is rejected"
+  ],
+  "audit_findings": [
+    "Legacy native reader uses request-owned dictionaries independent of its bounded LRU",
+    "The current review pipeline does not have an inference-result cache; it uses durable document/page revisions and job attempts",
+    "Context and glossary changes invalidate approvals and reject old result publication",
+    "Local model manifests and files are verified separately by existing model integrity tests"
+  ],
+  "limitations": [
+    "Synthetic native text documents only; no scan recognition accuracy measurement",
+    "Direct native inspection and extraction; no bounded worker or live HTTP server invoked",
+    "Durable translation publication uses synthetic results, not model inference",
+    "This is not a full 1000-page OCR, translation, human-review or export workload",
+    "Broader contextual translation and bilingual quality remain separate qualification work"
+  ],
+  "isolation": "All test PDFs and SQLite workspaces are in pytest tmp_path; no backend/local-data, user uploads, network requests, deployment or server restart"
+}

@@ -1,0 +1,29 @@
+{
+  "date": "2026-09-22",
+  "passed": true,
+  "scope": "Synthetic in-memory React component fixture, observed through Codex browser controls. No PDF worker, API calls, model inference or resource-limit changes.",
+  "fixture": "frontend/tests/structure-component-harness.tsx",
+  "checks": [
+    "Stale manual-grid draft disables editing and creation",
+    "Invalid non-increasing boundaries block creation",
+    "Every replaced source region must be explicitly selected",
+    "Out-of-range merged cells block creation",
+    "Save failure preserves note, selection and merged-cell draft",
+    "Successful grid submits captured revision, exact selected identities and merged geometry",
+    "Form preview shows stored and visible appearance values separately",
+    "Form apply blocks unmapped existing source regions",
+    "Form apply blocks stale page previews",
+    "Form failure preserves inspected evidence and mappings",
+    "Form success submits current preview, exact original and saved field identities, and note",
+    "Pointer drawing converts preview coordinates to bounded page geometry",
+    "Manual table controls fit a 390px mobile viewport without horizontal overflow"
+  ],
+  "mobile": {"viewport_width": 390, "viewport_height": 844, "document_scroll_width": 375, "visually_inspected": true},
+  "desktop_visually_inspected": true,
+  "console_warnings_or_errors": [],
+  "limitations": [
+    "Component callbacks are synthetic; these checks do not establish backend or worker integration.",
+    "No real document recognition accuracy or translation quality was assessed.",
+    "Broader acceptance corpus and target-workload qualification remain outstanding."
+  ]
+}

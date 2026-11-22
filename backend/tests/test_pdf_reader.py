@@ -43,7 +43,7 @@ def test_pdf_bytes_can_be_read_without_persistent_disk():
     assert reader.extract_bytes(content, 1, 1) == [{"page": 1, "text": "Serverless PDF"}]
 
 
-def test_legacy_hindi_font_is_omitted_but_english_spans_are_kept():
+def test_legacy_hindi_raw_spans_and_english_are_both_preserved():
     class FakePage:
         def get_text(self, mode, sort=True):
             assert mode == "dict"
@@ -68,21 +68,22 @@ def test_legacy_hindi_font_is_omitted_but_english_spans_are_kept():
                 ]
             }
 
-    assert PyMuPdfReader()._extract_ordered_text(FakePage()) == "DECLARATION FORM\n1-Insurance No."
+    assert PyMuPdfReader()._extract_ordered_text(FakePage()) == '?kks"k.kk i=k DECLARATION FORM\n1-chek la[;k@Insurance No.'
 
 
 def test_windows_encoded_punctuation_is_made_readable():
     assert PyMuPdfReader()._clean_text("\x93Family\x94") == '"Family"'
 
 
-def test_ocr_cleanup_repairs_wrapped_words_and_ocr_separator_artifacts():
+def test_ocr_cleanup_preserves_unverified_word_boundaries():
     assert PyMuPdfReader._clean_ocr_lines([
         "Compensation for damage caused by extin-",
         "guishment or suspension",
         "servient heritages respectivelyThey_must_be_quite",
     ]) == "\n".join([
-        "Compensation for damage caused by extinguishment or suspension",
-        "servient heritages respectively They must be quite",
+        "Compensation for damage caused by extin-",
+        "guishment or suspension",
+        "servient heritages respectivelyThey_must_be_quite",
     ])
 
 
@@ -99,7 +100,7 @@ def test_contents_detection_does_not_treat_normal_prose_as_an_index():
     assert not PyMuPdfReader._is_contents_style(prose_lines)
 
 
-def test_rapid_ocr_discards_isolated_lowercase_scan_noise(monkeypatch):
+def test_rapid_ocr_keeps_uncertain_short_tokens_for_review(monkeypatch):
     class FakeOutput:
         txts = ("A valid line", "y", "ii")
         scores = (0.99, 0.72, 0.99)
@@ -116,10 +117,11 @@ def test_rapid_ocr_discards_isolated_lowercase_scan_noise(monkeypatch):
             return FakePixmap()
 
     reader = PyMuPdfReader()
+    monkeypatch.setattr("app.infrastructure.pdf_reader.RapidOCR", FakeEngine)
     monkeypatch.setattr("app.infrastructure.pdf_reader._rapid_ocr_engine", FakeEngine())
     monkeypatch.setattr("app.infrastructure.pdf_reader._rapid_ocr_failed", False)
     monkeypatch.setattr("app.infrastructure.pdf_reader.Image.open", lambda _: object())
-    assert reader._rapid_ocr_page(FakePage()) == "A valid line\nii"
+    assert reader._rapid_ocr_page(FakePage()) == "A valid line\ny\nii"
 
 
 def test_positioned_ocr_rejoins_contents_rows_and_folio_spacing():
@@ -214,7 +216,7 @@ def test_positioned_ocr_preserves_roman_contents_labels_and_page_references():
     ])
 
 
-def test_contents_numbering_repairs_only_a_verified_consecutive_ocr_run():
+def test_contents_numbering_never_guesses_a_correction():
     lines = [
         "PAGE",
         "43. First entry", "44. Second entry", "45. Third entry", "46. Fourth entry",
@@ -226,9 +228,7 @@ def test_contents_numbering_repairs_only_a_verified_consecutive_ocr_run():
 
     repaired = PyMuPdfReader._repair_contents_numbering(lines)
 
-    assert repaired[8] == "50. Eighth entry"
-    assert repaired[15] == "56. Fourteenth entry"
-    assert repaired[16] == "57. Fifteenth entry"
+    assert repaired == lines
 
 
 def test_translation_falls_back_to_public_service(monkeypatch):

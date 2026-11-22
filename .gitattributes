@@ -1,0 +1,2 @@
+# Synthetic PDF fixtures must keep exact bytes and cross-reference offsets.
+*.pdf binary

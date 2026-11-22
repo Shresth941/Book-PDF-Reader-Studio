@@ -11,6 +11,8 @@ import {
   uploadPdf,
 } from "./api";
 import "./styles.css";
+import { ReaderWorkspace } from "./ReaderWorkspace";
+import { HostedWorkspace } from "./HostedWorkspace";
 
 interface StatusMessage {
   type: "info" | "success" | "error" | "warning";
@@ -379,8 +381,9 @@ function App() {
     }
     const targetLabel = targetLang === "hi" ? "Hindi" : "English";
     runAsync(`Translating draft into ${targetLabel}…`, async () => {
-      const res = await translateText(draftText, targetLang, draftLanguage, doc?.filename ?? "");
-      setDraftText(res.text);
+      const sourceSnapshot = draftText;
+      const res = await translateText(sourceSnapshot, targetLang, draftLanguage, doc?.filename ?? "");
+      setDraftText(current => current === sourceSnapshot ? res.text : current);
       setDraftLanguage(targetLang);
       setHasActiveSelection(false);
       setStatus({
@@ -1011,7 +1014,7 @@ const rootElement = document.getElementById("root");
 if (rootElement) {
   createRoot(rootElement).render(
     <AppErrorBoundary>
-      <App />
+      {import.meta.env.VITE_RUNTIME_MODE === "vercel" ? <HostedWorkspace /> : import.meta.env.VITE_RUNTIME_MODE === "hosted" ? <App /> : <ReaderWorkspace />}
     </AppErrorBoundary>,
   );
 }

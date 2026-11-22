@@ -1,87 +1,67 @@
-# GitHub and free Vercel deployment
+# Vercel launcher deployment
 
-## Live project
+## Full application deployment status — 2026-09-25
 
-- GitHub: <https://github.com/Shresth941/Book-PDF-Reader-Studio>
-- Production: <https://book-pdf-reader-studio.vercel.app>
+The user has explicitly waived further testing and requested the full application. Testing is no longer the deployment gate. The current local backend still needs a hosting migration; the existing static launcher is not a full application deployment.
 
-The Vercel project is connected to the GitHub repository. Pushes to `main`
-create production deployments automatically.
+Repository findings: hosted mode disables the current `/api/v2` API, while local mode rejects public hostnames. The current frontend assumes a same-origin API. SQLite/WAL, original documents, exports and backups require persistent writable storage. The job consumer is a process-resident thread and uses subprocesses for parsing/OCR/models. Session tokens, PDF passwords and worker serialization are process-local. Public account authentication/document ownership are not implemented, so simply removing the localhost check would expose the workspace. Translation wheel hashes are currently Windows-specific.
 
-## Architecture
+The smallest migration preserving the current workflow is one persistent backend instance with a durable private volume, installed OCR/models/fonts and authentication on every route, with the current React review interface on Vercel. Configure an authenticated HTTPS backend connection explicitly; do not switch to the obsolete hosted frontend or merely loosen the local boundary. Provision cloud storage independently; do not upload the local user workspace as deployment source.
 
-The repository uses Vercel Services to build three applications in one project:
+Vercel's official documentation, checked on 2026-09-25, lists Hobby Functions at 2 GB memory and 300 seconds, a 4.5 MB function request/response limit, and read-only filesystems with 500 MB temporary scratch space. Larger function bundles/container support does not supply persistent SQLite storage or preserve the current background-thread lifecycle. An all-Vercel implementation would instead require durable external storage and a durable serverless job architecture plus authentication.
 
-- `frontend`: the React and Vite user interface
-- `backend`: the Python FastAPI document and language API
-- `blob_upload`: the Express endpoint that issues short-lived Blob upload tokens
+The Vercel CLI account is connected and the existing project is accessible. No persistent backend target or its deployment access has been established. No new deployment, purchase, source upload or test run occurred for this request. Obtain the backend provider/server target and access before applying provider-specific configuration. Retain the user's free-only constraint unless they explicitly change it.
 
-Requests under `/api/` are routed to FastAPI, except `/api/blob-upload`, which
-is routed to the Express service to generate short-lived upload authorization
-for the frontend. All other requests go to the Vite frontend.
+Sources: [Function limits](https://vercel.com/docs/functions/limitations), [Runtime/filesystem support](https://vercel.com/docs/functions/runtimes).
 
-PDFs upload directly from the browser to a private Vercel Blob store. The
-FastAPI Function reads the private blob only when extracting the selected page
-range. This avoids the 4.5 MB Function request limit and does not rely on a
-Function's temporary filesystem.
+## Existing public launcher
 
-## Free-plan boundaries
+The current Vercel release is a static launch/setup page for the local Windows application. It opens http://127.0.0.1:8000 in a separate tab. The local server must run on the same computer as the browser. This page has no PDF upload, API proxy, model inference or access to the local database.
 
-The app uses Vercel's Hobby allowances. The private Blob allowance includes up
-to 1 GB-month of storage, 2,000 advanced operations, and 10 GB of Blob data
-transfer per month. Hobby users are not charged for additional Blob usage;
-Blob access pauses when a limit is exceeded until usage becomes available
-again. PDF uploads are capped at 25 MB by the upload token and backend.
+The previous three-service FastAPI/Blob deployment is superseded. Do not deploy the repository root: it contains local documents and models. The root `.vercelignore` denies all except the root configuration, which deliberately fails a direct build. A Git push is not part of the current deployment procedure.
 
-Scanned-page OCR uses RapidOCR, ONNX Runtime, and headless OpenCV. Those native
-dependencies make the Python Function larger than the standard 500 MB Python
-bundle limit, so the project opts into Vercel Large Functions (public beta) on
-Fluid compute. The setting is required for production and preview deployments.
+## Build and prepare
 
-Private uploaded PDFs remain in Blob storage until removed through the Vercel
-Storage dashboard. The app does not expose a public file URL. Avoid uploading
-confidential documents until user authentication and document ownership checks
-are added. Translation and dictionary features can send selected text to
-external language providers.
+From the project root:
 
-## Environment variables
+```powershell
+npm --prefix frontend run build:launcher
+.\tools\prepare-vercel.ps1
+```
 
-Vercel automatically provides the private Blob credentials when the store is
-connected to this project. Never copy those credentials into GitHub.
+The preparation command creates a fresh directory below `tmp/vercel-launcher-<unique-id>` and prints its absolute path and an adjacent file manifest. It copies only `index.html` and hashed JavaScript/CSS assets. Reparse points, unexpected files, more than 20 files and builds larger than 2 MB are rejected. The manifest records sizes and SHA-256 fingerprints. No original PDF, SQLite database, backup, model, environment file, screenshot or log is copied.
 
-| Variable | Location | Purpose |
-| --- | --- | --- |
-| `BLOB_READ_WRITE_TOKEN` | Vercel only | Private Blob read and upload authorization |
-| `VERCEL_SUPPORT_LARGE_FUNCTIONS` | Vercel Production and Preview | Set to `1` so the OCR runtime can exceed the standard Python bundle limit |
-| `MAX_UPLOAD_BYTES` | Optional Vercel setting | Additional backend upload cap |
-| `LIBRETRANSLATE_URL` | Optional Vercel setting | Translation provider URL |
-| `LIBRETRANSLATE_API_KEY` | Optional Vercel secret | Translation provider credential |
-| `VITE_API_BASE_URL` | Local frontend only | Local FastAPI origin, such as `http://localhost:8000` |
+The staging directory uses Vercel Build Output API version 3 with static files only. This platform format version is unrelated to the application's PDF verification version 5. The content security policy disables script network requests and form submission. No runtime environment variables or credentials belong in this public bundle.
 
-Variables beginning with `VITE_` are visible in the browser bundle and must
-never contain secrets. Local `.env` files, Vercel project metadata, private
-PDFs, logs, dependencies, and build output are excluded from Git.
+## Preview and production
 
-## Local development
+Use the existing Vercel project `book-pdf-reader-studio` in `shresth-singhs-projects`. Authentication must already be available to the CLI. Never paste tokens into source files, logs or documentation.
 
-Run FastAPI on port 8000 and Vite on port 5173 as described in the project
-README. Local development continues to use the local upload directory. The
-deployed production build automatically uses same-origin `/api` routes and
-private Blob uploads.
+```powershell
+vercel deploy --prebuilt --cwd '<printed staging path>' --yes
+# After verifying the same staged files:
+vercel deploy --prebuilt --cwd '<printed staging path>' --prod --yes
+```
 
-## Deployment verification
+The public production domain is https://book-pdf-reader-studio.vercel.app. Preview deployments can require the account's existing Vercel authentication; do not disable protection to test them. Use an authenticated CLI request when needed. Do not add `--public`, which can expose deployment source.
 
-After each production deployment:
+## Verification
 
-1. Check `/api/health` returns `{"status":"ok"}`.
-2. Upload a synthetic PDF smaller than 25 MB.
-3. Read a short page range and verify the extracted text.
-4. Test text, Word, and PDF draft exports.
-5. Test translation separately if an optional provider is configured.
+1. Confirm that `/` and the two referenced static assets return successfully and match the local manifest fingerprints.
+2. Check the content security policy, correct page title and visible local-server requirement.
+3. Check desktop and mobile layout, help disclosures, console errors, and the local link destination.
+4. Confirm `/api/health`, `/api/v2/documents` and private-looking paths return 404 rather than a live backend or file.
+5. Verify the local application separately on port 8000. Remote static-page success is not qualification of OCR, translation, legal accuracy or long-book processing.
+6. Record the deployment URL, immutable deployment ID, manifest and verification in `task.md`.
+
+The development application still requires bilingual acceptance testing, broader document support and long-book resource qualification. The launcher must retain its development-build and review notices.
+
+## Rollback
+
+Keep prior deployment IDs in the release ledger. Restore a previous verified **static launcher** deployment through Vercel's rollback workflow if a new launcher fails. The older multi-service deployment is a different architecture and must not be restored automatically. Rebuilding and redeploying a previously verified static bundle is also possible; retain its manifest. Do not delete local documents or migrate the SQLite workspace as part of web deployment.
 
 ## Official references
 
-- [Vercel Services](https://vercel.com/kb/guide/vercel-services)
-- [FastAPI on Vercel](https://vercel.com/docs/frameworks/backend/fastapi)
-- [Vercel Blob private storage](https://vercel.com/docs/vercel-blob/private-storage)
-- [Vercel Blob pricing](https://vercel.com/docs/vercel-blob/usage-and-pricing)
+- [Build Output API](https://vercel.com/docs/build-output-api)
+- [Prebuilt CLI deployments](https://vercel.com/docs/cli/deploy)
+- [Ignoring deployment files](https://vercel.com/docs/deployments/vercel-ignore)

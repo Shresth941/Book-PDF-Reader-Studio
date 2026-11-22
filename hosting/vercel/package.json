@@ -1,0 +1,6 @@
+{
+  "name": "pdf-reader-studio-hosted-runtime",
+  "private": true,
+  "version": "0.1.0",
+  "engines": { "node": "24.x" }
+}

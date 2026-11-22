@@ -1,0 +1,28 @@
+{
+  "date": "2026-09-23",
+  "passed": true,
+  "backend": {"passed": 390, "skipped": 3, "warnings": 6, "seconds": 252.02, "report": "tmp/backend-tests-preservation-20260923.xml"},
+  "frontend_build": "index-CprxwxlR.js",
+  "draft_checks": [
+    "Component reload restores bounds, unequal boundaries, merged header, source selections and reviewer note",
+    "Recovered component draft retains stale-revision refusal",
+    "Explicit discard removes the component draft across reload",
+    "Unfinished numeric boundary remains invalid after recovery",
+    "Successful component creation removes the browser draft",
+    "Real workspace document navigation and import preserve an unfinished grid",
+    "Real workspace page-navigation handler refuses navigation while a grid is unfinished",
+    "Explicit discard releases workspace navigation and import guards"
+  ],
+  "compatibility_checks": [
+    "Older running backend shows a save/restart instruction and omits unsupported manual table editing",
+    "Updated QA backend advertises the capability and enables the manual table editor"
+  ],
+  "console_warnings_or_errors": [],
+  "scope": "Five in-memory component recovery checks and three real-workspace browser-control checks; two loaded-backend compatibility checks. No user document mutations.",
+  "limitations": [
+    "Page-navigation refusal was exercised via the page input on a one-page synthetic document. An additional two-page fixture was not imported because normal available-memory checks failed at 702 MB.",
+    "Browser-native unload dialog behavior was not independently asserted; component reload recovery and workspace navigation guards were observed.",
+    "Browser storage refusal and simultaneous multi-tab draft editing were not browser-qualified.",
+    "Recognition accuracy, bilingual meaning and long-document workloads remain separate qualification tasks."
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "scope": "synthetic API/runtime pilot; not a bilingual quality assessment",
+  "direction": "hi-en",
+  "pages": 3,
+  "elapsed_seconds": 21.578,
+  "worker_memory_limit_mb": 3072,
+  "test_free_memory_reserve_mb": 128,
+  "samples": [
+    {
+      "source": "यह एक पुस्तक है।",
+      "translation": "It's a book.",
+      "checks": []
+    },
+    {
+      "source": "राशि सही नहीं है।",
+      "translation": "The sum isn't right.",
+      "checks": [
+        {
+          "code": "legal_scope",
+          "message": "Review obligations, permissions, negation and exceptions in their full clause context.",
+          "blocking": true
+        }
+      ]
+    },
+    {
+      "source": "ऋणी को 100 रुपये देने होंगे।",
+      "translation": "We need to give a hundred bucks.",
+      "checks": [
+        {
+          "code": "numbers_changed",
+          "message": "Numbers, dates, units or references differ. Check them against the original.",
+          "blocking": true
+        },
+        {
+          "code": "fact_relationships",
+          "message": "Verify who owes/receives each amount, which action/date it belongs to, and its unit. Matching numbers alone is insufficient.",
+          "blocking": true
+        }
+      ]
+    }
+  ]
+}

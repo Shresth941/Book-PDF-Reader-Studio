@@ -1,0 +1,69 @@
+{
+  "completed_on": "2026-09-25",
+  "release_qualified": false,
+  "scope": "Expanded regression and fault-injection cycle; fresh complete real-worker workflow remains blocked by RAM",
+  "backend": {
+    "passed": 433,
+    "skipped": 3,
+    "warnings": 6,
+    "seconds": 213.76,
+    "date": "2026-09-24",
+    "junit": "tmp/backend-tests-expanded-20260924.xml",
+    "log": "tmp/backend-tests-expanded-20260924.log",
+    "skips": "Two opt-in real local-model pilots and one legacy live-provider test"
+  },
+  "frontend": {
+    "build": "passed TypeScript and Vite, 139 modules",
+    "javascript": "index-BFvMggxm.js",
+    "css": "index-BPsUGhA9.css",
+    "pure_draft_tests": {"passed": 15, "failed": 0, "test": "frontend/tests/region-draft.test.ts"},
+    "browser_transport": "Actual ReviewWorkspace with synthetic fetch responses; no PDF worker, model, cloud or user documents",
+    "browser_checks_passed": [
+      "Held Alpha page response cannot overwrite Beta content",
+      "Held page-one response cannot replace page-two content",
+      "Translation typed during a held poll survives its release",
+      "Editable region controls are disabled during a held save",
+      "Releasing a save retains the submitted translation",
+      "New tab recovers language, kind, disposition, false text-presence and translation",
+      "Discard restores current server region state",
+      "Meaning and completeness notes survive page navigation",
+      "Failed approval retains the meaning note",
+      "Successful meaning approval clears its draft",
+      "Successful completeness approval clears its draft",
+      "Draft storage quota failure blocks document navigation and preserves the note",
+      "Explicit discard after quota failure restores approved notes",
+      "Content revision changes flag recovered review notes as stale",
+      "A newly opened tab recovers review notes"
+    ],
+    "browser_console": "No warnings/errors observed in the fixed fixture tab; baseline static server had an unused favicon 404",
+    "not_qualified": ["Native before-unload dialog interactions", "Simultaneous browser-tab draft conflicts", "Complete real-worker workflow on the newest frontend"]
+  },
+  "live": {
+    "workspace": "tmp/e2e-20260924",
+    "worker_cap_mb": 3072,
+    "reserve_mb": 1024,
+    "import_available_mb": 869,
+    "restart_retry_available_mb": 368,
+    "checks_passed": [
+      "Real HTTP import retains original bytes when inspection pauses",
+      "Browser displays pending page count and actual/required RAM",
+      "Browser retry shows actionable low-memory error and blocks export creation",
+      "Mutation without session token returns 403",
+      "Live backup download has correct checksums for all manifest members",
+      "Restore into a new directory retains pending document and original bytes",
+      "Actual server restart retains original, document revision and pending inspection",
+      "Retry after restart returns 503 low_memory without losing the original"
+    ],
+    "details": "tmp/live-qualification-20260924.json",
+    "blocked": ["Fresh inspection/extraction success", "Fresh actual-model inference in both directions", "Fresh browser-to-final-export workflow"]
+  },
+  "cache": {
+    "focused_passed": 18,
+    "native_pdf_page_counts": [512, 513, 740, 1000],
+    "over_limit_pages": 1001,
+    "report": "docs/measurements/2026-09-23-cache-qualification.json",
+    "limit": "Native text bookkeeping and durable inventory, not a 1000-page OCR/model workload"
+  },
+  "dependency_consistency": "pip check passed on 2026-09-25; build has existing Browserslist/Tailwind warnings",
+  "remaining_release_gates": "Independent bilingual corpus assessment, actual large-document resource qualification, incomplete plan capabilities and offline installer qualification remain outstanding"
+}

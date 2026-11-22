@@ -1,0 +1,108 @@
+import { chromium } from "playwright";
+import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const base = process.env.REVIEW_URL || "http://127.0.0.1:8000";
+const fixture = process.env.REVIEW_FIXTURE || fileURLToPath(new URL("./fixtures/sample.pdf", import.meta.url));
+const out = path.resolve("../tmp/browser-qa");
+await fs.mkdir(out, { recursive: true });
+const browser = await chromium.launch({ channel: "chrome", headless: true });
+const page = await browser.newPage({ viewport: {width: 1500, height: 1050} });
+const errors = [];
+const externalRequests = [];
+page.on("pageerror", error => errors.push(error.message));
+await page.route("**/*", route => {
+  const url = new URL(route.request().url());
+  if (["http:", "https:"].includes(url.protocol) && !["127.0.0.1", "localhost"].includes(url.hostname)) {
+    externalRequests.push(url.origin);
+    return route.abort();
+  }
+  return route.continue();
+});
+try {
+  await page.goto(base);
+  await page.getByRole("button", {name: "Detailed review", exact: true}).click();
+  await page.getByRole("heading", {name: "PDF Reader Studio", exact: true}).waitFor();
+  await page.waitForFunction(() => !document.querySelector('input[type="file"]')?.disabled);
+  await page.screenshot({path: path.join(out, "library.png"), fullPage: true});
+  await page.locator('input[type="file"]').setInputFiles(fixture);
+  await page.getByText("Original saved. Review inspection status, then extract the pages.", {exact: true}).waitFor({timeout: 60000});
+  await page.getByRole("button", {name: "Extract page", exact: true}).click();
+  await page.getByText(/extract · completed/).waitFor({timeout: 120000});
+  await page.getByLabel("Region", {exact: true}).selectOption({index: 1});
+  await page.getByLabel("Confirm source language").selectOption("en");
+  await page.getByLabel("Translation", {exact: true}).fill("ऋणी को 100 रुपये देने हैं।");
+  await page.getByRole("button", {name: "Save changes", exact: true}).click();
+  assert.equal(await page.getByRole("button", {name: "Generate page translations", exact: true}).isDisabled(), true);
+  await page.getByText(/Install and qualify ai4bharat\/indictrans2-en-indic-dist-200M/).last().waitFor();
+  await page.getByRole("button", {name: "Approve source recognition", exact: true}).click();
+  await page.getByPlaceholder("What did you verify or correct?").first().fill("Checked the debtor, amount and currency against the source.");
+  await page.getByRole("button", {name: "Approve translation and meaning", exact: true}).click();
+  await page.getByRole("button", {name: "✓ Translation reviewed", exact: true}).waitFor();
+  const reviewedRegion = await page.getByLabel("Region", {exact: true}).inputValue();
+  const savedSource = await page.getByLabel("Verified source", {exact: true}).inputValue();
+  await page.getByRole("button", {name: "↓ Move later", exact: true}).click();
+  await page.getByText(/Reading order: 2 of 2/).waitFor();
+  assert.equal(await page.getByLabel("Region", {exact: true}).inputValue(), reviewedRegion);
+  assert.equal(await page.getByLabel("Verified source", {exact: true}).inputValue(), savedSource);
+  assert.equal(await page.getByRole("button", {name: "✓ Translation reviewed", exact: true}).count(), 0);
+  await page.reload();
+  await page.getByRole("button", {name: /source.pdf|sample.pdf/}).first().click();
+  await page.getByLabel("Region", {exact: true}).selectOption(reviewedRegion);
+  await page.getByText(/Reading order: 2 of 2/).waitFor();
+  await page.getByRole("button", {name: "↑ Move earlier", exact: true}).click();
+  await page.getByText(/Reading order: 1 of 2/).waitFor();
+  await page.getByPlaceholder("What did you verify or correct?").first().fill("Checked clause context again after correcting reading order.");
+  await page.getByRole("button", {name: "Approve translation and meaning", exact: true}).click();
+  await page.getByRole("button", {name: "✓ Translation reviewed", exact: true}).waitFor();
+  assert.match(await page.locator(".library-item.selected").innerText(), /ready for review/);
+  await page.screenshot({path: path.join(out, "region-review.png"), fullPage: true});
+  await page.getByLabel("Translation", {exact: true}).fill("Unsaved recovery test");
+  page.once("dialog", dialog => dialog.accept());
+  await page.reload();
+  await page.getByRole("button", {name: /source.pdf|sample.pdf/}).first().click();
+  await page.getByText("Recovered unsaved region edits. Review and save them.", {exact: true}).waitFor();
+  assert.equal(await page.getByLabel("Translation", {exact: true}).inputValue(), "Unsaved recovery test");
+  await page.getByRole("button", {name: "Discard edits", exact: true}).click();
+  await page.getByText("Optional cloud assistance for this region", {exact: true}).click();
+  await page.getByRole("button", {name: "Preview exact cloud payload", exact: true}).click();
+  await page.getByText("Payload prepared locally. No document content has been sent.", {exact: true}).waitFor();
+  assert.equal(await page.getByRole("button", {name: "Approve this one cloud job", exact: true}).isDisabled(), true);
+  await page.getByRole("button", {name: "Create review copy", exact: true}).click();
+  await page.getByRole("link", {name: "Download review copy", exact: true}).waitFor({timeout: 60000});
+  assert.equal(await page.getByRole("link", {name: "Download reviewed PDF", exact: true}).count(), 0, "Partial content must not offer final download");
+  await page.waitForFunction(() => {
+    const preview = document.querySelector(".export-preview");
+    return preview instanceof HTMLImageElement && preview.complete && preview.naturalWidth > 0;
+  }, undefined, {timeout: 60000});
+  await page.screenshot({path: path.join(out, "partial-export.png"), fullPage: true});
+  await page.reload();
+  await page.getByRole("button", {name: /source.pdf|sample.pdf/}).first().click();
+  await page.getByRole("button", {name: "✓ Translation reviewed", exact: true}).waitFor();
+  await page.getByRole("button", {name: "+ Draw missing region", exact: true}).click();
+  const svg = page.locator(".source-canvas svg");
+  await svg.scrollIntoViewIfNeeded();
+  const box = await svg.boundingBox();
+  assert.ok(box);
+  await page.mouse.move(box.x + box.width * 0.1, box.y + box.height * 0.3);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height * 0.4, {steps: 5});
+  await page.mouse.up();
+  await page.getByText("Missing region added. Transcribe and review it against the original.", {exact: true}).waitFor();
+  assert.equal(await page.locator(".region-box").count(), 3);
+  await page.setViewportSize({width: 390, height: 844});
+  await page.screenshot({path: path.join(out, "mobile.png"), fullPage: true});
+  const width = await page.evaluate(() => ({scroll: document.documentElement.scrollWidth, viewport: window.innerWidth}));
+  assert.ok(width.scroll <= width.viewport + 2, `Horizontal overflow: ${JSON.stringify(width)}`);
+  assert.deepEqual(errors, []);
+  assert.deepEqual(externalRequests, [], "Local workspace must not request external fonts or services");
+  console.log(JSON.stringify({passed: true, checks: ["upload", "extract", "source approval", "translation approval", "reading order persistence and approval invalidation", "missing model explanation", "synchronized library status", "draft export", "final gate", "reload persistence", "unsaved-text recovery", "cloud preview without transmission", "draw missing region", "mobile overflow", "no browser exceptions", "no external network requests"], screenshots: out}));
+} catch (error) {
+  await page.screenshot({path: path.join(out, "failure.png"), fullPage: true});
+  console.error(await page.locator(".review-message").innerText());
+  throw error;
+} finally {
+  await browser.close();
+}

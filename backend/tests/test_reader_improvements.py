@@ -87,18 +87,18 @@ def test_hindi_translation_detects_the_source_and_uses_its_cache(monkeypatch):
     assert calls == [{"client": "gtx", "sl": "hi", "tl": "en", "dt": "t", "q": "नमस्ते"}]
 
 
-def test_translation_caches_the_reverse_direction_for_a_round_trip(monkeypatch):
+def test_reverse_translation_uses_a_real_independent_inference(monkeypatch):
     calls = []
 
     async def fake_translate_chunk(client, text, source, target):
         calls.append((text, source, target))
-        return "नमस्ते"
+        return "नमस्ते" if target == "hi" else "greetings"
 
     service = LibreTranslateService(None, None)
     monkeypatch.setattr(service, "_translate_chunk", fake_translate_chunk)
     assert asyncio.run(service.translate("hello", "en", "hi")) == "नमस्ते"
-    assert asyncio.run(service.translate("नमस्ते", "hi", "en")) == "hello"
-    assert calls == [("hello", "en", "hi")]
+    assert asyncio.run(service.translate("नमस्ते", "hi", "en")) == "greetings"
+    assert calls == [("hello", "en", "hi"), ("नमस्ते", "hi", "en")]
 
 
 def test_translation_chunks_stay_small_enough_for_unicode_query_strings():
