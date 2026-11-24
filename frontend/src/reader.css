@@ -117,6 +117,10 @@
 .reader-app .page-text-passage textarea:hover:not(:disabled) { background:#eaf3ff66; }
 .reader-app .page-text-passage textarea:focus { background:#f7fbff; outline:1px solid #438ce0; outline-offset:2px; overflow:auto; }
 .page-text-passage:focus-within { z-index:2; }
+.page-line-preview { position:absolute; inset:0; pointer-events:none; font-family:"Nirmala UI", "Times New Roman", serif; }
+.page-line { position:absolute; font-size:0; line-height:0; }
+.page-line-text { display:inline-block; white-space:pre; vertical-align:top; }
+.reader-app .page-text-positioned textarea, .reader-app .page-text-positioned textarea:disabled { color:transparent; -webkit-text-fill-color:transparent; }
 .page-text-overflow-mark { position:absolute; right:-11px; top:0; font-size:10px; color:#923b15; pointer-events:none; }
 .reader-app .reader-page-note { font-size:13px; margin:12px 20px; color:var(--reader-muted); }
 .reader-recognition { padding-top:16px; }

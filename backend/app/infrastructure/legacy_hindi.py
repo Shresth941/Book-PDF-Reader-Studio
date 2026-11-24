@@ -42,7 +42,19 @@ def decode_block(block):
     lines = []
     for line in block.get("lines", []):
         spans = []
+        runs = []
         for span in line["spans"]:
+            # Font-size/style splits can divide a Hindi syllable. Reassemble adjacent
+            # runs of the same encoding before moving pre-base vowel signs.
+            if runs and runs[-1].get("font") == span.get("font"):
+                previous = runs[-1]
+                gap = span.get("bbox", [0])[0] - previous.get("bbox", [0, 0, 0])[2]
+                separator = " " if gap > min(span.get("size", 12), previous.get("size", 12)) * .25 and not previous["text"].endswith(" ") and not span.get("text", "").startswith(" ") else ""
+                previous["text"] += separator + span.get("text", "")
+                previous["bbox"] = span.get("bbox", [0, 0, 0, 0])
+            else:
+                runs.append(dict(span))
+        for span in runs:
             font, text = span.get("font", ""), span.get("text", "")
             if any(h in font.casefold() for h in ("shiva", "kruti", "chanak", "devlys")):
                 text = decode_xpress(text, font)

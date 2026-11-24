@@ -55,3 +55,11 @@ The mapping table was adapted from [typesetu](https://github.com/ozairexe/typese
 - Hindi browser acceptance passed, including one page surface, no borders, unclipped source text, margins/side notes, shared zoom, download and mobile checks. Final measured jobs reached visible text in 2.65 s (page 41) and 2.59 s (page 101).
 - All **20** existing reader workflow checks passed: saved edits, recovery, real offline translation, export formats, detailed-review handoff, missing-model handling, scan recognition, and mobile layout.
 - User's existing Hindi pages 1 and 41 were safely refreshed; original bytes and saved corrections remain intact. Page 41 was visually inspected side by side in the running app.
+
+## Alignment refinement — 24 November 2026
+- Added individual line positions and widths so paragraph indents, short final lines, side notes and footnotes track the original more closely.
+- The reading preview adjusts word spaces only; Hindi letters and combining marks are not stretched apart. Clicking a passage keeps the existing editable text and save workflow.
+- Geometry is bound to the original extracted text; corrected text and translations use the regular editor instead of stale line positions.
+- Joined adjacent same-font fragments before decoding pre-base matras; visible gaps between those fragments preserve word boundaries. Original extraction evidence is unchanged.
+- Added regression cases for split कि, separate भारत का, source line indents and baselines, and edited-text fallback. Hindi browser acceptance and all 20 reader workflow checks passed; TypeScript and production build passed.
+- Final backend regression: **473 passed, 1 skipped**, with local OCR/model and supplied-PDF acceptance checks enabled.

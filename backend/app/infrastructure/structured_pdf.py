@@ -182,6 +182,8 @@ def text_layout(block):
     centers = [(line["bbox"][0] + line["bbox"][2]) / 2 for line in lines]
     centered = len(lines) > 1 and max(centers) - min(centers) < size * .6
     return {"bbox": [x0, top, x1, bottom], "font_size": size, "line_height": leading,
+            "lines": [{"x": line["bbox"][0], "y": line["spans"][0]["origin"][1] - size * .9,
+                       "width": line["bbox"][2] - line["bbox"][0]} for line in lines],
             "align": "center" if centered else "left",
             "bold": all("bold" in s.get("font", "").lower() for s in spans),
             "italic": all(any(t in s.get("font", "").lower() for t in ("italic", "oblique")) for s in spans)}
@@ -224,6 +226,7 @@ def extract_page(path, number, password="", retry=False, document_sha256=None):
                     item["source"] = ""
                     item["disposition"] = "unreadable"
                     item["evidence"].append("Native encoding is unreliable; compare OCR alternatives and transcribe the source.")
+            item["text_layout"]["source_text"] = item["source"]
             regions.append(item)
         for image in page.get_image_info():
             box = list(fitz.Rect(image["bbox"]) & page.rect)

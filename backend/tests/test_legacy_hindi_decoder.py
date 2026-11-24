@@ -43,6 +43,35 @@ def test_mixed_fonts_preserve_english_and_do_not_convert_its_digits():
     assert decode_block(block) == "Article 16: भारत"
 
 
+def test_split_prebase_matra_is_reassembled_without_changing_evidence():
+    from copy import deepcopy
+    block = {"lines": [{"spans": [
+        {"font": "XpressChanak", "text": "Á", "size": 12, "bbox": [10, 10, 14, 22]},
+        {"font": "XpressChanak", "text": "∑§", "size": 12, "bbox": [14, 10, 24, 22]},
+    ]}]}
+    before = deepcopy(block)
+    assert decode_block(block) == "कि"
+    assert block == before
+
+
+def test_visible_gap_between_font_runs_keeps_words_separate():
+    block = {"lines": [{"spans": [
+        {"font": "XpressChanak", "text": "÷Ê⁄UÃ", "size": 12, "bbox": [10, 10, 40, 22]},
+        {"font": "XpressChanak", "text": "∑§Ê", "size": 12, "bbox": [45, 10, 60, 22]},
+    ]}]}
+    assert decode_block(block) == "भारत का"
+
+
+def test_line_geometry_keeps_paragraph_indent_and_baselines():
+    block = GOLDEN[1]["block"]
+    layout = structured_pdf.text_layout(block)
+    assert len(layout["lines"]) == len(block["lines"])
+    assert layout["lines"][0]["x"] > layout["lines"][1]["x"]
+    for actual, original in zip(layout["lines"], block["lines"]):
+        assert actual["width"] == original["bbox"][2] - original["bbox"][0]
+        assert actual["y"] == original["spans"][0]["origin"][1] - layout["font_size"] * .9
+
+
 def test_integrated_extraction_uses_golden_text_without_ocr(tmp_path, monkeypatch):
     path = tmp_path / "native.pdf"
     with fitz.open() as pdf:

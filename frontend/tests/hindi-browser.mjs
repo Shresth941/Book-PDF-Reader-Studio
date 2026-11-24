@@ -44,6 +44,8 @@ try {
     assert.ok(layout.every(item => item.border === "0px"));
     assert.ok(layout.every(item => !item.clipped), `Page ${number} should display all source text`);
     assert.ok(new Set(layout.map(item => Math.round(item.x))).size > 1, "Keep side notes and page margins");
+    assert.ok(await page.locator(".page-line-preview").count() > 0, "Use original line positions");
+    assert.ok(await page.locator(".page-line-text").evaluateAll(es => es.every(e => Number.parseFloat(getComputedStyle(e).letterSpacing) === 0 || getComputedStyle(e).letterSpacing === "normal")), "Do not separate Hindi combining letters");
     assert.equal(await page.getByLabel("Source language", {exact: true}).inputValue(), "hi");
     assert.ok(await page.getByRole("button", {name: "Translate page", exact: true}).isDisabled());
     timings.push({page: number, seconds: (Date.now() - start) / 1000});
@@ -51,6 +53,14 @@ try {
   const download = page.waitForEvent("download");
   await page.getByRole("button", {name: "Download this page’s extracted text", exact: true}).click();
   assert.match(await fs.readFile(await (await download).path(), "utf8"), /124\./);
+  const first = page.getByLabel("Extracted text 1", {exact: true});
+  const saved = await first.inputValue();
+  await first.fill(saved + " edited");
+  await first.blur();
+  assert.equal(await first.locator("..").locator(".page-line-preview").count(), 0, "Edited text must not use stale geometry");
+  await first.fill(saved);
+  await page.getByRole("button", {name: "Save changes", exact: true}).click();
+  await page.getByText("Changes saved. Your original PDF is unchanged.", {exact: true}).waitFor();
   const beforeZoom = await page.locator(".page-text-sheet").boundingBox();
   await page.getByLabel("Page zoom", {exact: true}).selectOption("150");
   const afterZoom = await page.locator(".page-text-sheet").boundingBox();

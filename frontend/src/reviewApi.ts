@@ -49,7 +49,7 @@ export interface Region {
   overlaps?: string[];
   fonts?: string[];
   font_size?: number;
-  text_layout?: {bbox: [number, number, number, number]; font_size: number; line_height: number; align: "left" | "center"; bold: boolean; italic: boolean};
+  text_layout?: {source_text?: string; lines?: {x: number; y: number; width: number}[]; bbox: [number, number, number, number]; font_size: number; line_height: number; align: "left" | "center"; bold: boolean; italic: boolean};
   form_review_note?: string; form_evidence?: {status: string; stored_value: unknown; appearance: {text?: string | null; present: boolean}; discrepancies: {code?: string; message?: string}[]};
   form_evidence_changed?: boolean;
   table_id?: string; cell_id?: string; row?: number; column?: number; row_span?: number; column_span?: number;
