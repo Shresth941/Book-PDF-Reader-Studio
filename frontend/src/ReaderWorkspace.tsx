@@ -42,6 +42,7 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
   const [error, setError] = useState(false);
   const [source, setSource] = useState<"en" | "hi">("en");
   const [target, setTarget] = useState<"en" | "hi">("hi");
+  const [translationStyle, setTranslationStyle] = useState("general");
   const languagePage = useRef("");
   const [checked, setChecked] = useState(false);
   const [tab, setTab] = useState<"source" | "translation" | "compare">("source");
@@ -114,6 +115,7 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
     if (Object.keys(editsRef.current).length) {setMessage("Save or discard your changes before leaving this page."); return;}
     const epoch = ++active.current;
     languagePage.current = "";
+    setTranslationStyle(/legal|law|court|constitution|विधि/i.test(d.domain) || /\b(coi|law|act|constitution|easements?)\b|संविधान|अधिनियम/i.test(d.filename) ? "legal" : "general");
     setDoc(d); setNumber(n); setPage(undefined); setJobs([]); setArtifact(undefined);
     setChecked(false); setImageError(false); setPassword(""); setTarget(d.target); setSource(d.target === "hi" ? "en" : "hi");
     setTab("source"); setLibraryOpen(false);
@@ -206,8 +208,10 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
     let current = await api<ReviewPage>(pagePath);
     if (current.revision !== page.revision) throw new Error("This page changed since you checked it. Reopen the document and check the latest text before translating.");
     const d = await api<ReviewDocument>(base);
-    if (d.target !== target) {
-      await api(`${base}/context`, "PATCH", {revision: d.revision, target, domain: d.domain, jurisdiction: d.jurisdiction});
+    const legalDomain = /legal|law|court|constitution|विधि/i.test(d.domain);
+    const domain = translationStyle === "legal" ? (legalDomain ? d.domain : "legal") : (legalDomain ? "general" : d.domain);
+    if (d.target !== target || d.domain !== domain) {
+      await api(`${base}/context`, "PATCH", {revision: d.revision, target, domain, jurisdiction: d.jurisdiction});
       current = await api<ReviewPage>(pagePath);
     }
     for (const r of current.regions.filter(textRegion)) {
@@ -232,6 +236,7 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
   const needsSpecialist = regions.some(r => r.disposition === "translate" && !textRegion(r));
   const hasText = regions.some(r => textRegion(r) && r.source.trim());
   const hasTranslation = regions.some(r => !!r.translation.trim());
+  const termChecks = [...new Set(regions.flatMap(r => r.translation.trim() ? r.checks.filter(c => c.code.startsWith("glossary:")).map(c => c.message) : []))];
   const model = caps?.translation[`${source}-${target}`];
   const uploadButton = (label: string) => <label className={`reader-upload ${blocked || dirty ? "disabled" : ""}`}>{label}<input aria-label={label} type="file" accept="application/pdf,.pdf" disabled={blocked || dirty} onChange={e => {
     const file = e.target.files?.[0]; e.target.value = "";
@@ -256,7 +261,7 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
         </nav>
         {jobs.filter(j => !["completed", "cancelled"].includes(j.status)).map(j => <section className="reader-job" key={j.id} aria-label="Processing progress"><div><strong>{j.kind === "extract" ? "Reading pages" : "Translating pages"}{j.status === "paused" ? " — paused" : "…"}</strong><span>{j.cursor} of {j.payload.pages.length} pages finished</span><progress aria-label="Pages finished" value={j.cursor} max={j.payload.pages.length}/>{j.message && <p>{j.message}</p>}</div><button disabled={!!busy || dirty} onClick={() => void run("Updating progress…", async () => {await api(`/jobs/${j.id}/${j.status === "paused" ? "resume" : "pause"}`, "POST"); await refresh(doc.id, number);})}>{j.status === "paused" ? "Resume" : "Pause"}</button></section>)}
         {page?.error && <p className="reader-warning">{page.error}</p>}
-        {page?.status === "extracted" && regions.some(r => r.fonts?.some(f => /shiva|kruti|chanak|devlys/i.test(f)) && (!r.text_layout?.lines || !r.alternatives.some(a => a.method === "xpress-chanak-v1"))) && <div className="reader-help"><p>This page uses an older Hindi font. Refresh to recover Hindi directly where supported. Your saved corrections are kept.</p><button disabled={blocked || dirty} onClick={() => void run("Reading Hindi text…", async () => {
+        {page?.status === "extracted" && regions.some(r => r.fonts?.some(f => /shiva|kruti|chanak|devlys/i.test(f)) && (r.text_layout?.version !== 3 || !r.alternatives.some(a => a.method === "xpress-chanak-v1"))) && <div className="reader-help"><p>This page uses an older Hindi font. Refresh to recover Hindi directly where supported. Your saved corrections are kept.</p><button disabled={blocked || dirty} onClick={() => void run("Reading Hindi text…", async () => {
           await api(`${pagePath}/recognition`, "POST", {revision: page.revision});
           await refresh(doc.id, number); setChecked(false); setArtifact(undefined);
           setMessage("Hindi text refreshed. Saved corrections are kept. Check the text against the original before translating.");
@@ -291,6 +296,10 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
           </section>
         </div>
         <section className="reader-translate"><div><h2>Translate this page</h2><p>Check the extracted text against the original first. Fix any missing or incorrect words above.</p></div><div className="reader-actions"><label>Text is in<select aria-label="Source language" value={source} disabled={blocked} onChange={e => {setSource(e.target.value as "en" | "hi"); setChecked(false);}}><option value="en">English</option><option value="hi">Hindi</option></select></label><span aria-hidden="true">→</span><label>Translate to<select aria-label="Translation language" value={target} disabled={blocked} onChange={e => {setTarget(e.target.value as "en" | "hi"); setChecked(false); setArtifact(undefined);}}><option value="hi">Hindi</option><option value="en">English</option></select></label></div>
+          <label>Translation style<select aria-label="Translation style" value={translationStyle} disabled={blocked} onChange={e => {setTranslationStyle(e.target.value); setChecked(false);}}><option value="general">General</option><option value="legal">Legal terminology</option></select></label>
+          {translationStyle === "legal" && <p className="reader-caption">Uses legal headings and terminology, including your document glossary. The offline model still needs review for the meaning of complete clauses.</p>}
+          {!!termChecks.length && <details className="reader-help"><summary>{termChecks.length} legal or glossary terms need checking</summary><ul>{termChecks.map(text => <li key={text}>{text}</li>)}</ul></details>}
+          <details className="reader-help"><summary>Optional online legal translation</summary><p>Offline is the default. Online assistance requires a configured provider and your approval of the exact text before anything is sent.</p><p>{caps?.cloud.reason}</p><button disabled={blocked || dirty} onClick={() => onAdvanced(doc?.id)}>Open glossary and online review</button></details>
           <label className="reader-check"><input type="checkbox" checked={checked} disabled={blocked || dirty || !hasText || needsSpecialist || imageError} onChange={e => setChecked(e.target.checked)}/>I checked the extracted text against the original. All editable passages on this page are in {languages[source]}.</label>
           <button className="reader-primary" disabled={blocked || dirty || !checked || source === target || !model?.available || needsSpecialist} onClick={() => void run("Preparing translation…", translate)}>{hasTranslation ? "Translate page again" : "Translate page"}</button>
           {dirty && <p>Save your edits before translating.</p>}{source === target && <p>Choose a different language to translate into.</p>}

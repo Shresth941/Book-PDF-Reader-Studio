@@ -181,12 +181,16 @@ def text_layout(block):
     bottom = max(s["origin"][1] + s["size"] * .45 for s in spans)
     centers = [(line["bbox"][0] + line["bbox"][2]) / 2 for line in lines]
     centered = len(lines) > 1 and max(centers) - min(centers) < size * .6
-    return {"bbox": [x0, top, x1, bottom], "font_size": size, "line_height": leading,
+    total = sum(len(s.get("text", "").strip()) for s in spans) or 1
+    def dominant_style(names, flag):
+        return sum(len(s.get("text", "").strip()) for s in spans
+                   if s.get("flags", 0) & flag or any(name in s.get("font", "").lower() for name in names)) / total >= .7
+    return {"version": 3, "bbox": [x0, top, x1, bottom], "font_size": size, "line_height": leading,
             "lines": [{"x": line["bbox"][0], "y": line["spans"][0]["origin"][1] - size * .9,
                        "width": line["bbox"][2] - line["bbox"][0]} for line in lines],
             "align": "center" if centered else "left",
-            "bold": all("bold" in s.get("font", "").lower() for s in spans),
-            "italic": all(any(t in s.get("font", "").lower() for t in ("italic", "oblique")) for s in spans)}
+            "bold": dominant_style(("bold",), 16),
+            "italic": dominant_style(("italic", "oblique"), 2)}
 
 
 def extract_page(path, number, password="", retry=False, document_sha256=None):

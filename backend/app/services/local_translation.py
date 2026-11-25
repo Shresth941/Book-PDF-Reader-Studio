@@ -75,7 +75,41 @@ def split_exact(text, fits):
     return result
 
 
-def translate_segments(models_dir, regions, target):
+def translate_segments(models_dir, regions, target, domain="general", jurisdiction="", glossary=None):
+    from app.services.legal_translation import is_legal, legal_glossary, exact_legal_text, correct_known_terms
+    if not regions:
+        return {"regions": []}
+    sources = {r["source_language"] for r in regions}
+    if len(sources) != 1 or sources - {"en", "hi"} or target not in {"en", "hi"}:
+        raise ReviewError("language_required", "Confirm one Hindi or English source language per translation unit.")
+    if target in sources:
+        raise ReviewError("same_language", "Choose a different translation language.")
+    legal = is_legal(domain)
+    entries = [e for e in (glossary or []) if e.get("direction", f"{next(iter(sources))}-{target}") == f"{next(iter(sources))}-{target}"]
+    if legal:
+        entries += [e for e in legal_glossary(target) if not any(x["source"].casefold() == e["source"].casefold() for x in entries)]
+    if not legal and not entries:
+        return _translate_segments(models_dir, regions, target)
+    done, pending = {}, []
+    for r in regions:
+        exact = exact_legal_text(r["source"], target, entries)
+        if exact is None:
+            pending.append(r)
+        else:
+            done[r["id"]] = {"id": r["id"], "translation": exact, "alignment": [],
+                "model": "legal-terminology", "model_revision": "1", "translation_approved": False,
+                "draft_only": True, "quality_qualified": False, "translation_style": domain}
+    if pending:
+        output = _translate_segments(models_dir, pending, target)
+        originals = {r["id"]: r for r in pending}
+        for r in output["regions"]:
+            value, changes = correct_known_terms(originals[r["id"]]["source"], r["translation"], target, entries) if legal else (r["translation"], [])
+            done[r["id"]] = {**r, "translation": value, "translation_style": domain,
+                "terminology_adjustments": changes, "translation_approved": False, "quality_qualified": False}
+    return {"regions": [done[r["id"]] for r in regions]}
+
+
+def _translate_segments(models_dir, regions, target):
     if not regions:
         return {"regions": []}
     sources = {r["source_language"] for r in regions}

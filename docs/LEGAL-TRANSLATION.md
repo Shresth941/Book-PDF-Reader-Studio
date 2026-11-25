@@ -1,0 +1,32 @@
+# Offline legal translation and layout
+
+Choose **Legal terminology** under Translation style. Law/Constitution filenames suggest this style; the selection becomes the document domain when translation starts. Check the source against the original before translating. Existing approved translations are not replaced by translation jobs.
+
+## Architecture and scope
+
+The reader sends document domain and target language to the review API. The translation job passes that context and the document glossary to the isolated local worker. The local translator first handles exact known headings, then sends remaining passages to the installed offline model. Source-bound corrections replace only known erroneous equivalents when the corresponding Hindi term is present. Document glossary definitions take precedence. Review checks flag missing glossary terms even across line breaks.
+
+For example, `भारत का संविधान\n(भाग 3—मूल अधिकार)` becomes `Constitution of India\n(Part 3 — Fundamental Rights)`. Constitutional heading terminology follows the [Legislative Department bilingual Constitution resources](https://www.legislative.gov.in/constitution-of-india/) and the [India Code Constitution](https://www.indiacode.nic.in/bitstream/123456789/19150/1/constitution_of_india.pdf). The small glossary also contains general Indian legal vocabulary that must be checked in context. It is not an exhaustive legal dictionary.
+
+There is no fuzzy replacement of statutory clauses, substitution of newer statutory text, or automatic rewriting of may/shall, exceptions or negation. The installed Marian model is a general translation model: this change improves terminology and exact headings, but cannot guarantee court-quality prose or legally equivalent full passages. Every generated result remains an unapproved draft; terminology assistance does not confer model quality qualification.
+
+## Optional online review
+
+Offline remains the default. The reader links to the existing detailed glossary/online review screen. Online translation requires a configured provider, successful existing provider-policy checks, and explicit approval of the exact prepared payload before sending text. A failed connection does not silently switch providers or send documents elsewhere. No document text was sent to an online translator during these checks.
+
+## Layout
+
+Hindi retains original line positions, centered headings and dominant italics/bold, including headings containing plain punctuation. Word spacing does not stretch centered headings or separate Devanagari letters. Saved older pages can refresh recognition metadata without replacing corrected source text.
+
+English translations keep source margins, alignment and typography. Their passages grow vertically at the reading font size; subsequent passages in overlapping columns move down to avoid overlap. Longer translations can make the displayed sheet taller than the original. Identical pagination is therefore not promised. Existing export layouts and their review gates remain separate from the editable reader display.
+
+## Validation (2026-11-25)
+
+- Backend suite with installed local OCR/translation models and supplied Hindi PDF: **486 passed, 1 skipped**.
+- Legal unit regressions: exact bilingual headings, reverse glossary uniqueness, document overrides, source-bound corrections, unchanged general mode, missing terminology checks and punctuation-safe italic detection.
+- `frontend/tests/legal-browser.mjs`: offline legal selection/heading, unapproved output, very long translation without clipping, following passage moved below it, 100/150% zoom, mobile and no external browser requests.
+- `frontend/tests/reader-browser.mjs`: 20 existing upload/edit/recovery/translation/export/review/error/mobile/OCR checks passed.
+- `frontend/tests/hindi-browser.mjs`: supplied PDF cover and pages 41/101, Hindi geometry, dates/articles, edit fallback, zoom and mobile passed. Page extraction measured approximately 1.9 seconds each on this machine.
+- TypeScript and production build passed. Private source PDFs and generated QA outputs are not committed.
+
+Browser scripts require an isolated local QA server (default port 8002). Set `HINDI_ACCEPTANCE_PDF` to the local acceptance PDF for the Hindi script. Run scripts from `frontend`; never point destructive fixture workflows at the main port 8000 database.

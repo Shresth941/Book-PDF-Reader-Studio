@@ -83,7 +83,9 @@ class JobRunner:
                     # Language batches share one model at a time and no concurrent heavyweight instances.
                     for language in sorted({r["source_language"] for r in regions}):
                         output = self.worker.run("translate", {"models_dir": str(self.settings.models_dir.resolve()),
-                            "regions": [r for r in regions if r["source_language"] == language], "target": doc["target"]}, cancelled)
+                            "regions": [r for r in regions if r["source_language"] == language], "target": doc["target"],
+                            "domain": doc["domain"], "jurisdiction": doc["jurisdiction"],
+                            "glossary": self.store.glossary(identifier)}, cancelled)
                         by_id = {r["id"]: r for r in output["regions"]}
                         result["regions"] = [{**r, **by_id[r["id"]], "translation_approved": False, "acknowledged": {}} if r["id"] in by_id else r for r in result["regions"]]
                 self.store.checkpoint(job_id, attempt, number, page["revision"], result, doc["revision"])

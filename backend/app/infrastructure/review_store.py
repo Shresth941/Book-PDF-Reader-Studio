@@ -95,7 +95,7 @@ class ReviewStore:
 
     @staticmethod
     def _glossary(db, identifier):
-        target = db.execute("SELECT target FROM documents WHERE id=?", (identifier,)).fetchone()
+        target = db.execute("SELECT target,domain FROM documents WHERE id=?", (identifier,)).fetchone()
         direction = "en-hi" if target and target[0] == "hi" else "hi-en"
         entries = [json.loads(r[0]) for r in db.execute("SELECT body FROM glossary WHERE document_id=? ORDER BY rowid DESC", (identifier,))]
         precedence = {"document_definition": 0, "project": 1, "domain": 2, "general": 3}
@@ -105,6 +105,9 @@ class ReviewStore:
             if entry.get("direction", direction) == direction and key not in seen:
                 applicable.append(entry)
                 seen.add(key)
+        from app.services.legal_translation import is_legal, legal_glossary
+        if target and is_legal(target[1]):
+            applicable += [e for e in legal_glossary(target[0]) if not any(x["source"].casefold() == e["source"].casefold() for x in applicable)]
         return applicable
 
     def create_document(self, identifier, filename, sha256, inspection):

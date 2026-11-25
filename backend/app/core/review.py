@@ -39,7 +39,8 @@ def translation_issues(source: str, target: str, glossary: list[dict] | None = N
     if numeric_tokens(source) or re.search(r"(?i)\b(owes|pay|paid|debtor|creditor|liable)\b|देय|ऋणी|लेनदार", source):
         add("fact_relationships", "Verify who owes/receives each amount, which action/date it belongs to, and its unit. Matching numbers alone is insufficient.")
     for entry in glossary or []:
-        if entry.get("source") and entry["source"].casefold() in source.casefold() and entry.get("target", "").casefold() not in target.casefold():
+        compact = lambda text: re.sub(r"\s+", " ", text).strip().casefold()
+        if entry.get("source") and compact(entry["source"]) in compact(source) and compact(entry.get("target", "")) not in compact(target):
             add("glossary:" + entry["id"], f"Check approved term: {entry['source']} → {entry['target']} ({entry.get('sense', '')}).")
     return issues
 
