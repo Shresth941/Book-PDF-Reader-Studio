@@ -16,6 +16,10 @@ Offline remains the default. The reader links to the existing detailed glossary/
 
 ## Layout
 
+Contents pages are detected from repeated numbered entries and dotted leaders. Each title is translated independently; article identifiers and page references stay outside the model. Wrapped titles are joined within their entry, not with adjacent entries. Exact constitutional heading equivalents apply only to matching titles; article numbers alone never select a translation. Ambiguous entries stop translation for correction instead of silently dropping content.
+
+The reader displays contents rows with separate article, title and right-aligned page columns, plus centered section headings. Editing the source or translation disables the generated preview rather than showing stale text. Exports retain each entry in saved text; the structured on-screen preview does not promise identical PDF pagination.
+
 Hindi retains original line positions, centered headings and dominant italics/bold, including headings containing plain punctuation. Word spacing does not stretch centered headings or separate Devanagari letters. Saved older pages can refresh recognition metadata without replacing corrected source text.
 
 English translations keep source margins, alignment and typography. Their passages grow vertically at the reading font size; subsequent passages in overlapping columns move down to avoid overlap. Longer translations can make the displayed sheet taller than the original. Identical pagination is therefore not promised. Existing export layouts and their review gates remain separate from the editable reader display.
@@ -23,6 +27,7 @@ English translations keep source margins, alignment and typography. Their passag
 ## Validation (2026-11-25)
 
 - Backend suite with installed local OCR/translation models and supplied Hindi PDF: **486 passed, 1 skipped**.
+- Contents-page follow-up: **491 passed, 1 skipped**. Real page 16 preserves all 23 entries (143–164, including 144A) and their original page references. The browser regression verifies columns, wrapping, no overlap/clipping, 100/150% zoom, editing and mobile. Exact headings are processed without loading the model or contacting a service.
 - Legal unit regressions: exact bilingual headings, reverse glossary uniqueness, document overrides, source-bound corrections, unchanged general mode, missing terminology checks and punctuation-safe italic detection.
 - `frontend/tests/legal-browser.mjs`: offline legal selection/heading, unapproved output, very long translation without clipping, following passage moved below it, 100/150% zoom, mobile and no external browser requests.
 - `frontend/tests/reader-browser.mjs`: 20 existing upload/edit/recovery/translation/export/review/error/mobile/OCR checks passed.

@@ -40,6 +40,7 @@ export interface ReviewDocument {
 }
 export interface Check {code: string; message: string; blocking: boolean}
 export interface Region {
+  translation_layout?: {source: string; text: string; bbox: [number, number, number, number]; rows: {kind: string; label: string; text: string; page: string}[]};
   id: string; order: number; bbox: [number, number, number, number]; kind: string;
   raw: string; source: string; translation: string; source_language: string; language_hint: string;
   disposition: string; contains_text: boolean; reason: string; method: string;

@@ -66,7 +66,7 @@ def split_exact(text, fits):
         if best == start:
             raise ReviewError("token_limit", "A source unit cannot fit this model. Split or transcribe it manually.")
         if best < len(text):
-            boundary = max(text.rfind(c, start, best) for c in ("\n", "।", ". ", "; ", " "))
+            boundary = max(text.rfind(c, start, best) for c in ("\n", "à¥¤", ". ", "; ", " "))
             if boundary > start:
                 best = boundary + 1
         result.append((start, best, text[start:best]))
@@ -88,6 +88,9 @@ def translate_segments(models_dir, regions, target, domain="general", jurisdicti
     entries = [e for e in (glossary or []) if e.get("direction", f"{next(iter(sources))}-{target}") == f"{next(iter(sources))}-{target}"]
     if legal:
         entries += [e for e in legal_glossary(target) if not any(x["source"].casefold() == e["source"].casefold() for x in entries)]
+    from app.services.contents_translation import is_contents, translate_contents
+    if is_contents(regions):
+        return translate_contents(models_dir, regions, target, entries, legal, _translate_segments)
     if not legal and not entries:
         return _translate_segments(models_dir, regions, target)
     done, pending = {}, []

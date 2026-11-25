@@ -14,11 +14,13 @@ function Passage({region, value, field, index, disabled, onChange, placement, on
 }) {
   const input = useRef<HTMLTextAreaElement>(null);
   const preview = useRef<HTMLDivElement>(null);
+  const contents = useRef<HTMLDivElement>(null);
   const [focused, setFocused] = useState(false);
   const [overflow, setOverflow] = useState(false);
   const font = region.text_layout?.font_size || region.font_size || 12;
   const lines = Math.max(1, region.source.split("\n").length);
-  const [x0, y0, x1, y1] = region.text_layout?.bbox || region.bbox;
+  const contentsLayout = field === "translation" && region.translation_layout?.text === value && region.translation_layout?.source === region.source ? region.translation_layout : undefined;
+  const [x0, y0, x1, y1] = contentsLayout?.bbox || region.text_layout?.bbox || region.bbox;
   // Older saved pages lack baseline metadata; cap inflated legacy font ascenders.
   const legacy = !region.text_layout && region.fonts?.some(f => /shiva|kruti|chanak|devlys/i.test(f));
   const boxHeight = Math.max(font * 1.35, legacy ? Math.min(y1 - y0, lines * font * 1.5) : y1 - y0);
@@ -40,7 +42,7 @@ function Passage({region, value, field, index, disabled, onChange, placement, on
     el.style.lineHeight = `${lineHeight}px`;
     if (field === "translation" && onMeasure) {
       el.style.height = "1px";
-      const needed = Math.max(boxHeight, el.scrollHeight + 2);
+      const needed = Math.max(boxHeight, contentsLayout && !focused && contents.current ? contents.current.scrollHeight + 2 : el.scrollHeight + 2);
       el.style.height = "100%";
       onMeasure(needed);
       setOverflow(false);
@@ -51,7 +53,7 @@ function Passage({region, value, field, index, disabled, onChange, placement, on
       el.style.fontSize = `${size}px`;
     }
     setOverflow(el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1);
-  }, [value, width, height, font, lineHeight, field]);
+  }, [value, width, height, font, lineHeight, field, focused, contentsLayout]);
   useLayoutEffect(() => {
     const nodes = preview.current?.querySelectorAll<HTMLSpanElement>(".page-line-text");
     if (!nodes?.length) return;
@@ -68,7 +70,16 @@ function Passage({region, value, field, index, disabled, onChange, placement, on
       if (spaces && region.text_layout?.align !== "center") node.style.wordSpacing = `${Math.max(0, node.parentElement!.clientWidth - node.scrollWidth) / spaces}px`;
     });
   }, [showLines, value, geometry, font]);
-  return <div className={`page-text-passage${overflow ? " page-text-overflow" : ""}${showLines && !focused ? " page-text-positioned" : ""}`} style={{left: x0, top, width, height}}>
+  return <div className={`page-text-passage${overflow ? " page-text-overflow" : ""}${(showLines || contentsLayout) && !focused ? " page-text-positioned" : ""}`} style={{left: x0, top, width, height}}>
+    {contentsLayout && <div ref={contents} className="contents-preview" aria-hidden="true" style={{visibility: focused ? "hidden" : "visible", fontSize: font, lineHeight: `${font * 1.3}px`, fontFamily: /[\u0900-\u097f]/.test(value) ? undefined : '"Times New Roman", serif'}}>
+      {contentsLayout.rows.length === 2 && contentsLayout.rows.every(r => r.kind === "heading") && /^(Article|अनुच्छेद)$/.test(contentsLayout.rows[0].text)
+        ? <div style={{display: "flex", justifyContent: "space-between", fontWeight: 700}}>{contentsLayout.rows.map((r, i) => <span key={i}>{r.text}</span>)}</div>
+        : contentsLayout.rows.map((row, i) => row.kind === "entry"
+          ? <div className="contents-entry" key={i} style={{display: "grid", gridTemplateColumns: "28px minmax(0, 1fr) 25px", columnGap: 3, marginBottom: 3, alignItems: "end"}}>
+              <span style={{alignSelf: "start"}}>{row.label}</span><span style={{borderBottom: "1px dotted #9ca3af"}}>{row.text}</span><span style={{textAlign: "right"}}>{row.page}</span>
+            </div>
+          : <div key={i} style={row.kind === "folio" ? {position: "absolute", left: 0, top: 0} : {textAlign: "center", marginBottom: 4, fontWeight: 600}}>{row.text}</div>)}
+    </div>}
     {showLines && <div ref={preview} className="page-line-preview" aria-hidden="true" style={{visibility: focused ? "hidden" : "visible", fontWeight: region.text_layout?.bold ? 700 : 400, fontStyle: region.text_layout?.italic ? "italic" : "normal"}}>
       {geometry!.map((line, i) => <div key={i} className="page-line" style={{left: line.x - x0, top: line.y - top, width: Math.max(1, line.width), height: lineHeight, textAlign: region.text_layout?.align}}><span className="page-line-text" style={{fontSize: font, lineHeight: `${lineHeight}px`}}>{lineText[i]}</span></div>)}
     </div>}

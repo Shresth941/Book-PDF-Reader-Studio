@@ -1,0 +1,41 @@
+import {chromium} from 'playwright';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+const base=process.env.REVIEW_URL || 'http://127.0.0.1:8002';
+assert.equal(new URL(base).hostname,'127.0.0.1'); assert.notEqual(new URL(base).port,'8000');
+assert.ok(process.env.HINDI_ACCEPTANCE_PDF);
+const browser=await chromium.launch({channel:'chrome',headless:true});
+const page=await browser.newPage({viewport:{width:1600,height:1100}});
+page.setDefaultTimeout(30000);
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+const idle=()=>page.waitForFunction(()=>!document.querySelector('input[aria-label="Open PDF"]')?.disabled,undefined,{timeout:120000});
+try {
+ await page.goto(base); await idle();
+ await page.getByLabel('Open PDF',{exact:true}).setInputFiles(process.env.HINDI_ACCEPTANCE_PDF);
+ await page.getByLabel('Extracted text 1',{exact:true}).waitFor({timeout:120000});await idle();
+ await page.getByLabel('Page',{exact:true}).selectOption('16'); await idle();
+ await page.getByRole('button',{name:'Read this page',exact:true}).click();
+ await page.getByLabel('Extracted text 1',{exact:true}).waitFor({timeout:120000});await idle();
+ await page.getByLabel('Translation style').selectOption('legal');
+ await page.getByRole('checkbox',{name:/I checked the extracted text/}).check();
+ await page.getByRole('button',{name:'Translate page',exact:true}).click();
+ await page.locator('.contents-entry').first().waitFor({timeout:120000});await idle();
+ assert.equal(await page.locator('.contents-entry').count(),23);
+ const text=(await page.locator('.contents-preview').allTextContents()).join('\n');
+ assert.match(text,/Comptroller and Auditor-General of India/);assert.match(text,/144A\./);assert.match(text,/Other provisions as to Ministers/);
+ const check=async()=>{
+  const rows=await page.locator('.contents-entry').evaluateAll(es=>es.map(e=>({top:e.getBoundingClientRect().top,bottom:e.getBoundingClientRect().bottom,right:e.lastElementChild.getBoundingClientRect().right,clipped:e.scrollWidth>e.clientWidth+1})));
+  assert.ok(rows.every(r=>!r.clipped));
+  assert.ok(rows.every((r,i)=>!i||r.top>=rows[i-1].bottom-1));
+  assert.ok(Math.max(...rows.map(r=>r.right))-Math.min(...rows.map(r=>r.right))<2);
+ };
+ await check();await page.getByRole('heading',{name:'Page text',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:'../tmp/contents-desktop.png',fullPage:false});
+ await page.getByLabel('Page zoom',{exact:true}).selectOption('150');await check();
+ await page.getByLabel('Page zoom',{exact:true}).selectOption('100');
+ await page.getByLabel('Translation 3',{exact:true}).fill('Edited translation');await page.getByLabel('Translation 3',{exact:true}).blur();
+ assert.equal(await page.getByLabel('Translation 3',{exact:true}).locator('..').locator('.contents-preview').count(),0);
+ await page.setViewportSize({width:390,height:844});
+ assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+ assert.deepEqual(errors,[]);
+ console.log('PASS all 23 entries, legal equivalents, aligned page column, no overlap/clipping, zoom, stale-preview guard, mobile');
+}finally{await browser.close();}
