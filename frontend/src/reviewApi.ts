@@ -40,6 +40,7 @@ export interface ReviewDocument {
 }
 export interface Check {code: string; message: string; blocking: boolean}
 export interface Region {
+  published_match?: {english: string; en_page: number};
   translation_layout?: {source: string; text: string; bbox: [number, number, number, number]; rows: {kind: string; label: string; text: string; page: string}[]};
   id: string; order: number; bbox: [number, number, number, number]; kind: string;
   raw: string; source: string; translation: string; source_language: string; language_hint: string;
@@ -63,6 +64,7 @@ export interface TableProposal {
   decision?: {action: string; note: string}; structure_review?: {note: string};
 }
 export interface ReviewPage {
+  english_reference?: {page: number; label: string};
   number: number; revision: number; width: number; height: number; status: string;
   regions: Region[]; coverage_approved: boolean; blockers: string[]; error: string;
   table_proposals?: {status: string; tables: TableProposal[]; warnings: {code: string; message: string}[]};

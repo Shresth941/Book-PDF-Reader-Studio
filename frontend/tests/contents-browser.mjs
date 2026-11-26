@@ -23,6 +23,19 @@ try {
  assert.equal(await page.locator('.contents-entry').count(),23);
  const text=(await page.locator('.contents-preview').allTextContents()).join('\n');
  assert.match(text,/Comptroller and Auditor-General of India/);assert.match(text,/144A\./);assert.match(text,/Other provisions as to Ministers/);
+ assert.match(text,/Power of President to consult Supreme Court/);
+ assert.match(text,/\[Repealed\.\]/);
+ await page.getByRole('button',{name:'Published English',exact:true}).click();
+ const frame=page.getByTitle('Constitution of India, published English text');
+ assert.match(await frame.getAttribute('src'), /constitution-2015-en\.pdf#page=15$/);
+ const pdf=await page.request.get(base+'/references/constitution-2015-en.pdf');
+ assert.equal(pdf.status(),200);assert.match(pdf.headers()['content-type'],/application\/pdf/);
+ assert.equal((await pdf.body()).subarray(0,5).toString(),'%PDF-');
+ await page.getByText('Compare a passage in Google Translate',{exact:true}).click();
+ const google=await page.getByRole('link',{name:'Open Google Translate',exact:true}).getAttribute('href');
+ assert.equal(new URL(google).searchParams.has('text'),false);
+ assert.deepEqual([...new URL(google).searchParams.keys()],['sl','tl','op']);
+ await page.getByRole('button',{name:'Translation',exact:true}).click();
  const check=async()=>{
   const rows=await page.locator('.contents-entry').evaluateAll(es=>es.map(e=>({top:e.getBoundingClientRect().top,bottom:e.getBoundingClientRect().bottom,right:e.lastElementChild.getBoundingClientRect().right,clipped:e.scrollWidth>e.clientWidth+1})));
   assert.ok(rows.every(r=>!r.clipped));
@@ -36,6 +49,17 @@ try {
  assert.equal(await page.getByLabel('Translation 3',{exact:true}).locator('..').locator('.contents-preview').count(),0);
  await page.setViewportSize({width:390,height:844});
  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+ page.once('dialog', d=>d.accept());
+ await page.getByRole('button',{name:'Discard changes',exact:true}).click();
+ await page.getByLabel('Page',{exact:true}).selectOption('41');await idle();
+ await page.getByRole('button',{name:'Read this page',exact:true}).click();
+ await page.getByLabel('Extracted text 1',{exact:true}).waitFor({timeout:120000});await idle();
+ await page.getByRole('button',{name:'Translation',exact:true}).click();
+ await page.getByRole('button',{name:'Use published wording',exact:true}).click();
+ assert.match(await page.getByLabel('Translation 5',{exact:true}).inputValue(),/^16\. \(1\) There shall be equality of opportunity/);
+ await page.getByRole('button',{name:'Save changes',exact:true}).click();await idle();
+ await page.getByText('Changes saved. Your original PDF is unchanged.',{exact:true}).waitFor();
+ assert.match(await page.getByLabel('Translation 5',{exact:true}).inputValue(),/appointment to any office under the State\./);
  assert.deepEqual(errors,[]);
  console.log('PASS all 23 entries, legal equivalents, aligned page column, no overlap/clipping, zoom, stale-preview guard, mobile');
 }finally{await browser.close();}

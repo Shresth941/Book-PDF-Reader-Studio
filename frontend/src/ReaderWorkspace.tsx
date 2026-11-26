@@ -1,3 +1,4 @@
+import {PublishedEnglish, GoogleComparison} from "./ConstitutionReference";
 import React, {useEffect, useRef, useState} from "react";
 import {reviewCall as api, reviewUrl, ReviewDocument, ReviewPage, ReviewJob, ReviewExport, Region, Capabilities} from "./reviewApi";
 import {ReviewWorkspace} from "./ReviewWorkspace";
@@ -45,7 +46,7 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
   const [translationStyle, setTranslationStyle] = useState("general");
   const languagePage = useRef("");
   const [checked, setChecked] = useState(false);
-  const [tab, setTab] = useState<"source" | "translation" | "compare">("source");
+  const [tab, setTab] = useState<"source" | "translation" | "compare" | "published">("source");
   const [showOriginal, setShowOriginal] = useState(true);
   const [imageError, setImageError] = useState(false);
   const [imageAttempt, setImageAttempt] = useState(0);
@@ -85,6 +86,7 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
       setMessage(paused ? "Processing paused. Read the message below, then choose Resume when you’re ready." : "Your page is ready. You can read, edit, translate, or download it.");
     }
     setDoc(d); setJobs(j.jobs); setPage(p);
+    if (languagePage.current === "" && p?.english_reference) setTranslationStyle("legal");
     const languageKey = `${id}:${n}`;
     if (p?.status === "extracted" && languagePage.current !== languageKey) {
       const hints = p.regions.filter(r => textRegion(r) && /[A-Za-z\u0900-\u097f]/.test(r.source)).map(r =>
@@ -118,7 +120,7 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
     setTranslationStyle(/legal|law|court|constitution|विधि/i.test(d.domain) || /\b(coi|law|act|constitution|easements?)\b|संविधान|अधिनियम/i.test(d.filename) ? "legal" : "general");
     setDoc(d); setNumber(n); setPage(undefined); setJobs([]); setArtifact(undefined);
     setChecked(false); setImageError(false); setPassword(""); setTarget(d.target); setSource(d.target === "hi" ? "en" : "hi");
-    setTab("source"); setLibraryOpen(false);
+    setTab(previous => d.id === doc?.id && previous === "published" ? "published" : "source"); setLibraryOpen(false);
     await refresh(d.id, n, epoch); recover(d.id, n);
   }
   useEffect(() => {
@@ -236,6 +238,8 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
   const needsSpecialist = regions.some(r => r.disposition === "translate" && !textRegion(r));
   const hasText = regions.some(r => textRegion(r) && r.source.trim());
   const hasTranslation = regions.some(r => !!r.translation.trim());
+  const publishedMatches = regions.filter(r => textRegion(r) && r.published_match && !r.translation_approved
+    && r.translation !== r.published_match.english);
   const termChecks = [...new Set(regions.flatMap(r => r.translation.trim() ? r.checks.filter(c => c.code.startsWith("glossary:")).map(c => c.message) : []))];
   const model = caps?.translation[`${source}-${target}`];
   const uploadButton = (label: string) => <label className={`reader-upload ${blocked || dirty ? "disabled" : ""}`}>{label}<input aria-label={label} type="file" accept="application/pdf,.pdf" disabled={blocked || dirty} onChange={e => {
@@ -268,18 +272,26 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
         })}>Refresh Hindi text recognition</button></div>}
         {caps?.ocr.installed === false && <details className="reader-help"><summary>Working with a scanned PDF?</summary><p>Scanned pages need OCR to turn pictures into text. Tesseract is not installed on this computer. Digital PDFs still work. Install Tesseract with Hindi and English language data, restart the app, and retry, or use Detailed review to transcribe the page.</p></details>}
         <div className="reader-view-controls">
-          <div className="reader-tabs" role="group" aria-label="Text view">{(["source", "translation", "compare"] as const).map(t => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t === "source" ? "Extracted text" : t === "translation" ? "Translation" : "Compare text"}</button>)}</div>
+          <div className="reader-tabs" role="group" aria-label="Text view">{(["source", "translation", "compare"] as const).map(t => <button key={t} aria-pressed={tab === t} onClick={() => setTab(t)}>{t === "source" ? "Extracted text" : t === "translation" ? "Translation" : "Compare text"}</button>)}{page?.english_reference && <button aria-pressed={tab === "published"} onClick={() => setTab("published")}>Published English</button>}</div>
           <label>Page zoom<select aria-label="Page zoom" value={zoom} onChange={e => setZoom(Number(e.target.value))}><option value={100}>Fit</option><option value={125}>125%</option><option value={150}>150%</option><option value={200}>200%</option></select></label>
         </div>
-        {hasText && <p className="reader-page-instruction">Click text on the page to edit. Position and spacing follow the original.</p>}
+        {hasText && tab !== "published" && <p className="reader-page-instruction">Click text on the page to edit. Position and spacing follow the original.</p>}
         <div className={`reader-desk ${showOriginal ? "" : "reader-text-only"}`}>
           {showOriginal && <section className="reader-original"><div className="reader-pane-title"><h2>Original page</h2><span>Page {number}</span></div><div className="reader-paper">
             {imageError ? <div className="reader-placeholder"><p>We couldn’t show this page. Try again, or open the original PDF above.</p><button onClick={() => {setImageError(false); setImageAttempt(v => v + 1);}}>Retry page preview</button></div> : <img style={{width: `${zoom}%`}} src={reviewUrl(`${pagePath}/image?attempt=${imageAttempt}`)} alt={`Original PDF page ${number}`} onError={() => setImageError(true)}/>}
           </div></section>}
           <section className="reader-text"><div className="reader-pane-title"><h2>Page text</h2><span>{dirty ? "Unsaved changes" : "Saved"}</span></div>
 
-            {!hasText && <div className="reader-placeholder"><h3>{running ? "Reading your page…" : "Bring the text into view"}</h3><p>{running ? "You can watch the progress above. Your original is safe." : regions.some(r => recognizedText(r)) ? "We found text in this scanned page. Check the suggestion below, then use it as editable text." : page?.status === "extracted" ? "No editable paragraphs were found. This may be a scan, a blank page, or a form. Open Detailed review to inspect it." : "Choose Read this page to turn the PDF into editable text."}</p></div>}
-            {hasText && page && <>
+            {tab === "translation" && target === "en" && translationStyle === "legal" && !!publishedMatches.length &&
+              <div className="reader-save"><span>{publishedMatches.length} passages match the published English edition.</span>
+                <button disabled={blocked || dirty} onClick={() => {
+                  const changes: Edits = {};
+                  for (const r of publishedMatches) changes[r.id] = {source: r.source, translation: r.published_match!.english};
+                  storeEdits(changes);
+                }}>Use published wording</button></div>}
+            {tab === "published" && page?.english_reference && <PublishedEnglish location={page.english_reference}/>}
+            {tab !== "published" && !hasText && <div className="reader-placeholder"><h3>{running ? "Reading your page…" : "Bring the text into view"}</h3><p>{running ? "You can watch the progress above. Your original is safe." : regions.some(r => recognizedText(r)) ? "We found text in this scanned page. Check the suggestion below, then use it as editable text." : page?.status === "extracted" ? "No editable paragraphs were found. This may be a scan, a blank page, or a form. Open Detailed review to inspect it." : "Choose Read this page to turn the PDF into editable text."}</p></div>}
+            {tab !== "published" && hasText && page && <>
 
               <div className={`reader-page-editors ${tab === "compare" ? "reader-page-compare" : ""}`}>
                 {(["source", "translation"] as const).filter(field => tab === "compare" || tab === field).map(field => <div key={field}>
@@ -299,6 +311,8 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
           <label>Translation style<select aria-label="Translation style" value={translationStyle} disabled={blocked} onChange={e => {setTranslationStyle(e.target.value); setChecked(false);}}><option value="general">General</option><option value="legal">Legal terminology</option></select></label>
           {translationStyle === "legal" && <p className="reader-caption">Uses legal headings and terminology, including your document glossary. The offline model still needs review for the meaning of complete clauses.</p>}
           {!!termChecks.length && <details className="reader-help"><summary>{termChecks.length} legal or glossary terms need checking</summary><ul>{termChecks.map(text => <li key={text}>{text}</li>)}</ul></details>}
+          {page?.english_reference && <p>Read this book in the original English wording. <button className="reader-primary" type="button" onClick={() => {setTab("published"); document.querySelector(".reader-text")?.scrollIntoView({block: "start"});}}>Read published English</button> Editable translations use verified matches where available and local drafts elsewhere.</p>}
+          <GoogleComparison key={pagePath} regions={regions} source={source} target={target}/>
           <details className="reader-help"><summary>Optional online legal translation</summary><p>Offline is the default. Online assistance requires a configured provider and your approval of the exact text before anything is sent.</p><p>{caps?.cloud.reason}</p><button disabled={blocked || dirty} onClick={() => onAdvanced(doc?.id)}>Open glossary and online review</button></details>
           <label className="reader-check"><input type="checkbox" checked={checked} disabled={blocked || dirty || !hasText || needsSpecialist || imageError} onChange={e => setChecked(e.target.checked)}/>I checked the extracted text against the original. All editable passages on this page are in {languages[source]}.</label>
           <button className="reader-primary" disabled={blocked || dirty || !checked || source === target || !model?.available || needsSpecialist} onClick={() => void run("Preparing translation…", translate)}>{hasTranslation ? "Translate page again" : "Translate page"}</button>

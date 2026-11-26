@@ -66,7 +66,7 @@ def split_exact(text, fits):
         if best == start:
             raise ReviewError("token_limit", "A source unit cannot fit this model. Split or transcribe it manually.")
         if best < len(text):
-            boundary = max(text.rfind(c, start, best) for c in ("\n", "à¥¤", ". ", "; ", " "))
+            boundary = max(text.rfind(c, start, best) for c in ("\n", "।", ". ", "; ", " "))
             if boundary > start:
                 best = boundary + 1
         result.append((start, best, text[start:best]))
@@ -75,7 +75,7 @@ def split_exact(text, fits):
     return result
 
 
-def translate_segments(models_dir, regions, target, domain="general", jurisdiction="", glossary=None):
+def translate_segments(models_dir, regions, target, domain="general", jurisdiction="", glossary=None, document_sha=None, page_number=None):
     from app.services.legal_translation import is_legal, legal_glossary, exact_legal_text, correct_known_terms
     if not regions:
         return {"regions": []}
@@ -89,12 +89,21 @@ def translate_segments(models_dir, regions, target, domain="general", jurisdicti
     if legal:
         entries += [e for e in legal_glossary(target) if not any(x["source"].casefold() == e["source"].casefold() for x in entries)]
     from app.services.contents_translation import is_contents, translate_contents
+    from app.services.constitution_reference import HINDI_SHA, published_passage
+    edition = legal and target == "en" and document_sha == HINDI_SHA
     if is_contents(regions):
-        return translate_contents(models_dir, regions, target, entries, legal, _translate_segments)
+        return translate_contents(models_dir, regions, target, entries, legal, _translate_segments, edition=edition)
     if not legal and not entries:
         return _translate_segments(models_dir, regions, target)
     done, pending = {}, []
     for r in regions:
+        reference = published_passage(r["source"], page_number) if edition else None
+        if reference:
+            done[r["id"]] = {"id": r["id"], "translation": reference["english"],
+                "model": "constitution-of-india", "model_revision": "2015-11-09",
+                "reference_page": reference["en_page"], "alignment": [], "translation_approved": False,
+                "quality_qualified": False, "draft_only": True}
+            continue
         exact = exact_legal_text(r["source"], target, entries)
         if exact is None:
             pending.append(r)

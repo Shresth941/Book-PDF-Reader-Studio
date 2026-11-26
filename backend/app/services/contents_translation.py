@@ -95,7 +95,7 @@ def exact_title(text, target, entries, legal):
     return None
 
 
-def translate_contents(models_dir, regions, target, entries, legal, translate):
+def translate_contents(models_dir, regions, target, entries, legal, translate, edition=False):
     plans, pending = {}, []
     right = max((r.get("text_layout") or {}).get("bbox", r["bbox"])[2] for r in regions)
     for r in regions:
@@ -107,6 +107,12 @@ def translate_contents(models_dir, regions, target, entries, legal, translate):
         for index, row in enumerate(rows):
             row["id"] = f"{r['id']}:contents:{index}"
             row["text"] = exact_title(row["source"], target, entries, legal)
+            if edition and row["kind"] == "entry":
+                from app.services.constitution_reference import contents_title
+                reference = contents_title(row["label"], row["source"])
+                if reference:
+                    article, item = reference
+                    row.update(label=article + ".", text=item["en"], reference_page=item["en_page"])
             if row["text"] is None:
                 pending.append({"id": row["id"], "source": row["source"], "source_language": r["source_language"]})
         plans[r["id"]] = rows

@@ -35,3 +35,15 @@ English translations keep source margins, alignment and typography. Their passag
 - TypeScript and production build passed. Private source PDFs and generated QA outputs are not committed.
 
 Browser scripts require an isolated local QA server (default port 8002). Set `HINDI_ACCEPTANCE_PDF` to the local acceptance PDF for the Hindi script. Run scripts from `frontend`; never point destructive fixture workflows at the main port 8000 database.
+
+## Published English for the 9 November 2015 Constitution
+
+The supplied 544-page Hindi book identifies its edition on PDF page 3. The corresponding 494-page English edition has the same date, publisher and amendment cutoff. The reader includes that publicly issued English PDF, with its printed wording, footnotes, contents and layout. Select **Published English** to read it offline or download the complete edition. The link uses article starts from the two contents lists because the editions have different pagination. Continuations can open at the beginning of the provision. Unindexed schedules and appendices open at the English contents.
+
+For editable translations, the worker checks the imported Hindi file's SHA-256. On a matching edition, 458 indexed headings require both the article identifier and the source title to match. For 32 reviewed passages or headings from the Preamble and selected early articles, the Hindi page and the whole normalized passage must match. These pairs include Article 16(3), which spans two English pages. Exact matches take the wording of this edition, retaining amendment markers. Entries keep the page references printed in the Hindi book. Other editable passages use the existing offline draft translator. Review approvals remain separate from reference matches.
+
+The English publication is *The Constitution of India (As on 9th November, 2015)*, Government of India, Ministry of Law and Justice (Legislative Department), reproduced by [WIPO Lex, IN104](https://www.wipo.int/wipolex/en/legislation/details/15811). Bundled PDF SHA-256 is `5bb100f186eda2e9366f87f74c1b2b1507cf245355ad8886848f9f0c7f221966`. The companion indexes record PDF page numbers in both editions. The [Indian Kanoon Article 143 entry](https://indiankanoon.org/doc/121923369/) provides a secondary comparison and interleaves editorial notes with the text. The bundled government edition governs exact wording here.
+
+**Compare a passage in Google Translate** previews and copies one selected passage. The external link contains only language and interface parameters. Pasting is a separate user action. No account, API key, billing or background submission is needed for this workflow. [Google Cloud Translation](https://cloud.google.com/translate) is a separate metered service.
+
+Validation covered all 23 contents entries on Hindi page 16, opening the matching English contents page, copying Article 16(1) into an editable draft, saving it, and a narrow-screen layout. The Google comparison link includes no passage text.

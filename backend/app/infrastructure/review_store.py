@@ -156,15 +156,25 @@ class ReviewStore:
         with self.connection() as db:
             page = self._page(db, identifier, number)
             glossary = self._glossary(db, identifier)
-            page["blockers"] = page_blockers(page, glossary, self._document(db, identifier)["target"])
+            document = self._document(db, identifier)
+            from app.services.constitution_reference import HINDI_SHA, published_passage, reading_location
+            if document["sha256"] == HINDI_SHA:
+                page["english_reference"] = reading_location(number)
+                for region in page["regions"]:
+                    match = published_passage(region["source"], number)
+                    if match:
+                        region["published_match"] = match
+            page["blockers"] = page_blockers(page, glossary, document["target"])
             for region in page["regions"]:
                 region["checks"] = translation_issues(region.get("source", ""), region.get("translation", ""), glossary) if region["disposition"] == "translate" else []
             return page
 
     def _save_page(self, db, identifier, page, action, detail):
         page.pop("blockers", None)
+        page.pop("english_reference", None)
         for r in page["regions"]:
             r.pop("checks", None)
+            r.pop("published_match", None)
         page["revision"] += 1
         db.execute("UPDATE pages SET revision=?,body=? WHERE document_id=? AND number=?",
                    (page["revision"], encode(page), identifier, page["number"]))

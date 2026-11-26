@@ -85,6 +85,7 @@ class JobRunner:
                         output = self.worker.run("translate", {"models_dir": str(self.settings.models_dir.resolve()),
                             "regions": [r for r in regions if r["source_language"] == language], "target": doc["target"],
                             "domain": doc["domain"], "jurisdiction": doc["jurisdiction"],
+                            "document_sha": doc["sha256"], "page_number": number,
                             "glossary": self.store.glossary(identifier)}, cancelled)
                         by_id = {r["id"]: r for r in output["regions"]}
                         result["regions"] = [{**r, **by_id[r["id"]], "translation_approved": False, "acknowledged": {}} if r["id"] in by_id else r for r in result["regions"]]
