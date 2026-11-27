@@ -142,6 +142,22 @@ class CloudApproval(BaseModel):
     reviewer: str = Field(min_length=1, max_length=120)
 
 
+class BrowserLanguages(Revision):
+    source: Literal["en", "hi"]
+    target: Literal["en", "hi"]
+
+
+class GoogleComparisonRequest(BrowserLanguages):
+    text: str = Field(min_length=1, max_length=5000)
+    public_nonpersonal: Literal[True]
+    approve_send: Literal[True]
+
+
+class BrowserTranslations(BrowserLanguages):
+    document_revision: int = Field(ge=1)
+    translations: dict[str, Annotated[str, Field(min_length=1, max_length=200000)]] = Field(max_length=10000)
+
+
 class ReviewAPI:
     def __init__(self, settings):
         self.settings = settings
@@ -212,6 +228,22 @@ class ReviewAPI:
     def register(self):
         router = self.router
 
+        from app.services.chrome_translation import chrome_page
+
+        @router.post("/documents/{identifier}/pages/{number}/regions/{region_id}/google-compare")
+        async def google_compare(identifier: UUID, number: int, region_id: UUID, payload: GoogleComparisonRequest):
+            from app.services.google_cloud_translation import compare
+            return await compare(self.settings, self.store, str(identifier), number, str(region_id),
+                                 payload.revision, payload.text, payload.source, payload.target)
+
+        @router.post("/documents/{identifier}/pages/{number}/chrome/plan")
+        def chrome_plan(identifier: UUID, number: int, payload: BrowserLanguages):
+            return chrome_page(self.store, str(identifier), number, **payload.model_dump(exclude={"reviewer"}))
+
+        @router.post("/documents/{identifier}/pages/{number}/chrome/apply")
+        def chrome_apply(identifier: UUID, number: int, payload: BrowserTranslations):
+            return chrome_page(self.store, str(identifier), number, **payload.model_dump(exclude={"reviewer"}))
+
         @router.post("/documents/{identifier}/pages/{number}/recognition")
         async def refresh_recognition(identifier: UUID, number: int, payload: Revision):
             key = str(identifier)
@@ -272,6 +304,7 @@ class ReviewAPI:
                     "structure": {"native": True, "manual_tables": True, "docling": False, "paddle": False,
                                   "reason": "Advanced structure/OCR models require separate local qualification."},
                     "cloud": self.cloud.capability(),
+                    "google_comparison": self.settings.runtime_mode == "local" and bool(self.settings.google_translate_api_key),
                     "limits": {"pages": self.settings.max_pages, "bytes": self.settings.max_upload_bytes,
                                "worker_memory_mb": self.settings.worker_memory_mb}}
 

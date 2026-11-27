@@ -76,6 +76,7 @@ export interface ReviewExport {
   blockers: string[]; layout_approvals: Record<string, unknown>; current: boolean;
 }
 export interface Capabilities {
+  google_comparison?: boolean;
   translation: Record<string, {available: boolean; reason: string; model?: string; draft_only?: boolean}>;
   ocr: {installed: boolean}; structure: {reason: string; manual_tables?: boolean}; cloud: {available: boolean; reason: string};
 }

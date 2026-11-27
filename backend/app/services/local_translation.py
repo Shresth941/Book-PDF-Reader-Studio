@@ -75,7 +75,7 @@ def split_exact(text, fits):
     return result
 
 
-def translate_segments(models_dir, regions, target, domain="general", jurisdiction="", glossary=None, document_sha=None, page_number=None):
+def translate_segments(models_dir, regions, target, domain="general", jurisdiction="", glossary=None, document_sha=None, page_number=None, model_translate=None):
     from app.services.legal_translation import is_legal, legal_glossary, exact_legal_text, correct_known_terms
     if not regions:
         return {"regions": []}
@@ -84,6 +84,7 @@ def translate_segments(models_dir, regions, target, domain="general", jurisdicti
         raise ReviewError("language_required", "Confirm one Hindi or English source language per translation unit.")
     if target in sources:
         raise ReviewError("same_language", "Choose a different translation language.")
+    translate = model_translate or _translate_segments
     legal = is_legal(domain)
     entries = [e for e in (glossary or []) if e.get("direction", f"{next(iter(sources))}-{target}") == f"{next(iter(sources))}-{target}"]
     if legal:
@@ -92,9 +93,9 @@ def translate_segments(models_dir, regions, target, domain="general", jurisdicti
     from app.services.constitution_reference import HINDI_SHA, published_passage
     edition = legal and target == "en" and document_sha == HINDI_SHA
     if is_contents(regions):
-        return translate_contents(models_dir, regions, target, entries, legal, _translate_segments, edition=edition)
+        return translate_contents(models_dir, regions, target, entries, legal, translate, edition=edition)
     if not legal and not entries:
-        return _translate_segments(models_dir, regions, target)
+        return translate(models_dir, regions, target)
     done, pending = {}, []
     for r in regions:
         reference = published_passage(r["source"], page_number) if edition else None
@@ -112,7 +113,7 @@ def translate_segments(models_dir, regions, target, domain="general", jurisdicti
                 "model": "legal-terminology", "model_revision": "1", "translation_approved": False,
                 "draft_only": True, "quality_qualified": False, "translation_style": domain}
     if pending:
-        output = _translate_segments(models_dir, pending, target)
+        output = translate(models_dir, pending, target)
         originals = {r["id"]: r for r in pending}
         for r in output["regions"]:
             value, changes = correct_known_terms(originals[r["id"]]["source"], r["translation"], target, entries) if legal else (r["translation"], [])

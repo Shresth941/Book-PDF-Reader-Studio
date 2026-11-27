@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     worker_timeout_seconds: int = 90
     model_timeout_seconds: int = 300
     models_dir: Path = Path("models")
+    google_translate_api_key: SecretStr | None = None
     gemini_api_key: SecretStr | None = None
     google_readonly_access_token: SecretStr | None = None
     google_project_number: str = ""

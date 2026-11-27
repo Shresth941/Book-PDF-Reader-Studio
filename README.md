@@ -10,6 +10,12 @@ Double-click **Open-PDF-Reader.cmd**, or run `./Start-Local.ps1 -OpenBrowser` fr
 
 Startup rebuilds the frontend when Node.js is available, so source changes appear on the next launch. `-SkipBuild` reuses the existing build. If Node.js is unavailable, startup can use an existing build with an explicit warning.
 
+## Google translation
+
+In desktop Chrome, open **Translate this page → Translator** and select **Google Translate · on-device in Chrome**. Choose English and Hindi in either direction, check the extracted source, then click **Translate page**. Chrome may download the language pack on first use. Translation runs on the computer, and each completed page is saved as a draft. Exact Constitution matches and contents-page numbers use the same rules for both offline engines. Browser support and language-pack availability are checked for the selected pair. [Chrome Translator API](https://developer.chrome.com/docs/ai/translator-api)
+
+For an online comparison in the local reader, a project owner can configure a dedicated **GOOGLE_TRANSLATE_API_KEY** in the backend environment or ignored `backend/.env`, restrict it to the Cloud Translation API, and restart the server. **Compare a passage in Google Translate** shows the exact passage. Sending it to Google Cloud requires explicit consent for that request and may incur charges on the configured project. The returned comparison is displayed beside the source. [Google Cloud setup](https://cloud.google.com/translate/docs/setup) · [Pricing](https://cloud.google.com/translate/pricing)
+
 ## Everyday workflow
 
 1. **Open PDF.** The first page is extracted automatically. Use **Read all pages** for the rest of a document; progress can be paused and resumed.

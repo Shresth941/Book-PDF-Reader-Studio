@@ -44,6 +44,21 @@ For editable translations, the worker checks the imported Hindi file's SHA-256. 
 
 The English publication is *The Constitution of India (As on 9th November, 2015)*, Government of India, Ministry of Law and Justice (Legislative Department), reproduced by [WIPO Lex, IN104](https://www.wipo.int/wipolex/en/legislation/details/15811). Bundled PDF SHA-256 is `5bb100f186eda2e9366f87f74c1b2b1507cf245355ad8886848f9f0c7f221966`. The companion indexes record PDF page numbers in both editions. The [Indian Kanoon Article 143 entry](https://indiankanoon.org/doc/121923369/) provides a secondary comparison and interleaves editorial notes with the text. The bundled government edition governs exact wording here.
 
-**Compare a passage in Google Translate** previews and copies one selected passage. The external link contains only language and interface parameters. Pasting is a separate user action. No account, API key, billing or background submission is needed for this workflow. [Google Cloud Translation](https://cloud.google.com/translate) is a separate metered service.
+**Compare a passage in Google Translate** previews and copies one selected passage. A locally configured Cloud Translation Basic key also enables an in-app comparison after the user approves the displayed public passage. The external link contains only language and interface parameters. Pasting is a separate user action. No account, API key, billing or background submission is needed for this workflow. [Google Cloud Translation](https://cloud.google.com/translate) is a separate metered service.
 
 Validation covered all 23 contents entries on Hindi page 16, opening the matching English contents page, copying Article 16(1) into an editable draft, saving it, and a narrow-screen layout. The Google comparison link includes no passage text.
+
+### Google translation checks
+
+The Chrome page translator was exercised through upload, source review, translation and a fresh read of the saved draft. These outputs came from the installed English/Hindi Chrome model. Wording can change with model updates.
+
+| Direction | Source passage | Saved draft |
+| --- | --- | --- |
+| English → Hindi | The applicant must file the appeal within 30 days. | आवेदक को 30 दिनों के भीतर अपील दायर करनी होगी। |
+| Hindi → English | आवेदक को 30 दिनों के भीतर अपील दायर करनी होगी। | The applicant must file an appeal within 30 days. |
+| English → Hindi | The court will not hear case 42 on Monday. | कोर्ट सोमवार को केस 42 पर सुनवाई नहीं करेगा। |
+| Hindi → English | न्यायालय सोमवार को मामले की सुनवाई करेगा। | The court will hear the matter on Monday. |
+
+The samples check the actor, obligation, time limit, negation and case number where present. Google used the conversational terms “कोर्ट” and “केस” in its general translation. For the exact legal wording of the supported Constitution edition, select **Published English**. Google drafts still go through the existing legal and number checks.
+
+An isolated browser run can be repeated with `node tests/google-translation-browser.mjs` from `frontend` against a QA server on port 8002. The Chrome profile stores its language files under ignored `tmp/`. Cloud Basic adapter tests use simulated Google responses for both directions, quota, timeout, access denial, unavailable credentials and invalid output. Live Cloud Basic requires a configured key.

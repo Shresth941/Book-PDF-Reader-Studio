@@ -1,3 +1,4 @@
+import {chromeAvailability, openChromeTranslator, translateUnits, type Availability, type TranslationSession} from "./chromeTranslator";
 import {PublishedEnglish, GoogleComparison} from "./ConstitutionReference";
 import React, {useEffect, useRef, useState} from "react";
 import {reviewCall as api, reviewUrl, ReviewDocument, ReviewPage, ReviewJob, ReviewExport, Region, Capabilities} from "./reviewApi";
@@ -44,6 +45,16 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
   const [source, setSource] = useState<"en" | "hi">("en");
   const [target, setTarget] = useState<"en" | "hi">("hi");
   const [translationStyle, setTranslationStyle] = useState("general");
+  const [engine, setEngine] = useState<"local" | "chrome">("local");
+  const [chromeState, setChromeState] = useState<Availability>("unavailable");
+  const chromeAbort = useRef<AbortController>();
+  useEffect(() => {
+    let current = true;
+    setChromeState("unavailable");
+    chromeAvailability(source, target).then(value => {if (current) setChromeState(value);});
+    return () => {current = false;};
+  }, [source, target, engine]);
+  useEffect(() => () => chromeAbort.current?.abort(), []);
   const languagePage = useRef("");
   const [checked, setChecked] = useState(false);
   const [tab, setTab] = useState<"source" | "translation" | "compare" | "published">("source");
@@ -207,16 +218,38 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
   }
   async function translate() {
     if (!checked || dirty || !doc || !page || source === target) return;
+    const controller = new AbortController();
+    let session: TranslationSession | undefined;
+    try {
+      if (engine === "chrome") {
+        chromeAbort.current = controller;
+        setBusy("Preparing Google’s on-device translator…");
+        session = await openChromeTranslator(source, target, controller.signal, setBusy);
+        setChromeState("available");
+      }
+      await translateCheckedPage(session, controller.signal);
+    } catch (error) {
+      if (controller.signal.aborted) {setMessage("Translation cancelled."); return;}
+      throw error;
+    } finally {
+      session?.destroy();
+      chromeAbort.current = undefined;
+    }
+  }
+  async function translateCheckedPage(session: TranslationSession | undefined, signal: AbortSignal) {
+    if (!page || !doc) return;
     let current = await api<ReviewPage>(pagePath);
     if (current.revision !== page.revision) throw new Error("This page changed since you checked it. Reopen the document and check the latest text before translating.");
     const d = await api<ReviewDocument>(base);
     const legalDomain = /legal|law|court|constitution|विधि/i.test(d.domain);
     const domain = translationStyle === "legal" ? (legalDomain ? d.domain : "legal") : (legalDomain ? "general" : d.domain);
+    signal.throwIfAborted();
     if (d.target !== target || d.domain !== domain) {
       await api(`${base}/context`, "PATCH", {revision: d.revision, target, domain, jurisdiction: d.jurisdiction});
       current = await api<ReviewPage>(pagePath);
     }
     for (const r of current.regions.filter(textRegion)) {
+      signal.throwIfAborted();
       if (!r.source.trim()) throw new Error("Some text is empty. Fill it in or use Detailed review to mark a blank area.");
       if (r.source_language !== source || r.disposition !== "translate") {
         current = await api<ReviewPage>(`${pagePath}/regions/${r.id}`, "PATCH", {
@@ -224,11 +257,27 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
           source_language: source, disposition: "translate", contains_text: true, reason: r.reason, kind: r.kind,
         });
       }
+      signal.throwIfAborted();
       const updated = current.regions.find(x => x.id === r.id)!;
       if (!updated.source_approved) current = await api<ReviewPage>(`${pagePath}/approvals`, "POST", {
         revision: current.revision, kind: "source", region_id: r.id,
       });
       setPage(current);
+    }
+    if (session) {
+      const languages = {source, target, revision: current.revision};
+      const plan = await api<{document_revision: number; units: Record<string, string>}>(`${pagePath}/chrome/plan`, "POST", languages);
+      const translations = await translateUnits(session, plan.units, signal, setBusy);
+      signal.throwIfAborted();
+      chromeAbort.current = undefined;
+      setBusy("Saving translated page…");
+      const saved = await api<ReviewPage>(`${pagePath}/chrome/apply`, "POST", {...languages, document_revision: plan.document_revision, translations});
+      setChecked(false); setTab("translation"); setPage(saved); setArtifact(undefined);
+      await refresh(doc.id, number);
+      const changedNumbers = saved.regions.some(r => r.checks.some(c => c.code === "numbers_changed"));
+      if (changedNumbers) setMessage("Draft saved. Some numbers or references differ from the source. Compare them with the original.");
+      else setMessage(Object.keys(translations).length ? "Page translated on this device. Review the draft against the original." : "Page ready. All passages already had approved translations or local wording.");
+      return;
     }
     await api(`${base}/jobs`, "POST", {kind: "translate", start: number, end: number});
     setChecked(false); setTab("translation"); await refresh(doc.id, number);
@@ -308,17 +357,25 @@ function SimpleReader({initialDocumentId, onAdvanced}: {initialDocumentId?: stri
           </section>
         </div>
         <section className="reader-translate"><div><h2>Translate this page</h2><p>Check the extracted text against the original first. Fix any missing or incorrect words above.</p></div><div className="reader-actions"><label>Text is in<select aria-label="Source language" value={source} disabled={blocked} onChange={e => {setSource(e.target.value as "en" | "hi"); setChecked(false);}}><option value="en">English</option><option value="hi">Hindi</option></select></label><span aria-hidden="true">→</span><label>Translate to<select aria-label="Translation language" value={target} disabled={blocked} onChange={e => {setTarget(e.target.value as "en" | "hi"); setChecked(false); setArtifact(undefined);}}><option value="hi">Hindi</option><option value="en">English</option></select></label></div>
+          <label>Translator<select aria-label="Translator" disabled={blocked} value={engine} onChange={e => {setEngine(e.target.value as "local" | "chrome"); setChecked(false);}}>
+            <option value="local">Installed offline model</option>
+            <option value="chrome" disabled={chromeState === "unavailable"}>Google Translate · on-device in Chrome</option>
+          </select></label>
+          {engine === "chrome" && <p className="reader-caption">{chromeState === "unavailable" ? "This language pair is unavailable in this browser." : chromeState === "available" ? "Chrome translates on this device." : "Translating downloads Chrome’s language files first. Your document text stays on this device."}</p>}
+          {engine === "local" && chromeState === "unavailable" && source !== target && <p className="reader-caption">Google’s on-device option requires a supported desktop Chrome browser and language pair.</p>}
+          {chromeAbort.current && busy && <button onClick={() => chromeAbort.current?.abort()}>Cancel Google translation</button>}
           <label>Translation style<select aria-label="Translation style" value={translationStyle} disabled={blocked} onChange={e => {setTranslationStyle(e.target.value); setChecked(false);}}><option value="general">General</option><option value="legal">Legal terminology</option></select></label>
           {translationStyle === "legal" && <p className="reader-caption">Uses legal headings and terminology, including your document glossary. The offline model still needs review for the meaning of complete clauses.</p>}
           {!!termChecks.length && <details className="reader-help"><summary>{termChecks.length} legal or glossary terms need checking</summary><ul>{termChecks.map(text => <li key={text}>{text}</li>)}</ul></details>}
           {page?.english_reference && <p>Read this book in the original English wording. <button className="reader-primary" type="button" onClick={() => {setTab("published"); document.querySelector(".reader-text")?.scrollIntoView({block: "start"});}}>Read published English</button> Editable translations use verified matches where available and local drafts elsewhere.</p>}
-          <GoogleComparison key={pagePath} regions={regions} source={source} target={target}/>
+          <GoogleComparison key={`${pagePath}:${page?.revision}:${source}:${target}`} regions={regions} source={source} target={target}
+            path={pagePath} revision={page?.revision} configured={!!caps?.google_comparison} disabled={blocked || dirty}/>
           <details className="reader-help"><summary>Optional online legal translation</summary><p>Offline is the default. Online assistance requires a configured provider and your approval of the exact text before anything is sent.</p><p>{caps?.cloud.reason}</p><button disabled={blocked || dirty} onClick={() => onAdvanced(doc?.id)}>Open glossary and online review</button></details>
           <label className="reader-check"><input type="checkbox" checked={checked} disabled={blocked || dirty || !hasText || needsSpecialist || imageError} onChange={e => setChecked(e.target.checked)}/>I checked the extracted text against the original. All editable passages on this page are in {languages[source]}.</label>
-          <button className="reader-primary" disabled={blocked || dirty || !checked || source === target || !model?.available || needsSpecialist} onClick={() => void run("Preparing translation…", translate)}>{hasTranslation ? "Translate page again" : "Translate page"}</button>
+          <button className="reader-primary" disabled={blocked || dirty || !checked || source === target || (engine === "chrome" ? chromeState === "unavailable" : !model?.available) || needsSpecialist} onClick={() => void run("Preparing translation…", translate)}>{hasTranslation ? "Translate page again" : "Translate page"}</button>
           {dirty && <p>Save your edits before translating.</p>}{source === target && <p>Choose a different language to translate into.</p>}
           {needsSpecialist && <p>This page includes tables or form fields. Use Detailed review to check their structure before translating.</p>}
-          {source !== target && model && !model.available && <div className="reader-warning">Automatic translation is unavailable. You can type a translation in the Translation tab. <details><summary>Setup details</summary>{model.reason}</details></div>}
+          {engine === "local" && source !== target && model && !model.available && <div className="reader-warning">Automatic translation is unavailable. You can type a translation in the Translation tab. <details><summary>Setup details</summary>{model.reason}</details></div>}
           <p className="reader-caption">For mixed-language pages, use Detailed review to choose each passage’s language. Translations are drafts, not certified translations.</p>
         </section>
       </>}
